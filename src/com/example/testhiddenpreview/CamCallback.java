@@ -41,7 +41,7 @@ public class CamCallback implements Camera.PreviewCallback{
     
     static int lightOn = 0;
     
-    static int bits = 0;
+    static int bits = 8;
     
     public static LinkedBlockingDeque<FrameData> frameQueue; 
 
@@ -62,10 +62,8 @@ public class CamCallback implements Camera.PreviewCallback{
     
     static int sleep = 1000 - expectedValue;
     
-
     CamCallback(){
     	
-		
 		/*try {
 			stream = new FileOutputStream(MainActivity.delayFile);
 		} catch (FileNotFoundException e) {
@@ -109,7 +107,7 @@ public class CamCallback implements Camera.PreviewCallback{
 			
 			if(mode == Mode.check_light){
 				
-				MainActivity.debugging.setText("Waiting for Light");
+				//MainActivity.debugging.setText("Waiting for Light");
 				
 				int light = checkForLight();
 				
@@ -182,7 +180,7 @@ public class CamCallback implements Camera.PreviewCallback{
 			}*/
 			else if(mode == Mode.decode){
 				
-				MainActivity.debugging.setText("Bits:" +bits + "...Decoding...");
+				//MainActivity.debugging.setText("Bits:" + bits + "...Decoding...");
 
 				
 				//captureFrame();
@@ -196,9 +194,7 @@ public class CamCallback implements Camera.PreviewCallback{
 				}
 				*/
 				
-				
-				
-				
+
 				try {
 					
 					if(frameQueue.size() < 80)
@@ -268,7 +264,7 @@ public class CamCallback implements Camera.PreviewCallback{
 				}
 				
 				try {
-					Thread.sleep(sleep);
+					Thread.sleep(sleep); //sleep 1 sec
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -278,7 +274,7 @@ public class CamCallback implements Camera.PreviewCallback{
 			}
 			else if(mode == Mode.waiting){
 				
-				MainActivity.debugging.setText("Waiting..");
+				//MainActivity.debugging.setText("Waiting..");
 				
 				frameNumber++;
 				
