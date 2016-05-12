@@ -1,5 +1,6 @@
 package com.example.testhiddenpreview;
 
+import android.os.Handler;
 import android.util.Log;
 
 //separate thread implementation
@@ -7,8 +8,7 @@ class Decoder implements Runnable {
 	long minPrime;
 	
 	static String message = "";
-
-
+	Handler handler = new Handler();
 	private static final String TAG = "Decoder Thread";
 	
 	int[] result;
@@ -20,7 +20,7 @@ class Decoder implements Runnable {
 		
 		String binaryString = "";
 		String resultStr = "";
-		int started = -1;
+		int started = 0;
 		
         int tid=android.os.Process.myTid();
         
@@ -86,18 +86,19 @@ class Decoder implements Runnable {
 					}
 				}
 				
-				
+				StringBuilder bitstring = new StringBuilder();
 				for (int i = 0; i < result.length; i++) {
 					System.out.print(result[i]);
-					
+					bitstring.append(result[i]);
 				}
 				
+				binaryString = bitstring.toString();
+				
 				System.out.print("\n");
+				System.out.print("**Binary String = " + binaryString + "**\n");
 
 				
-				
-				
-			
+				/*
 				//transform to binary
 				for (int i = 0; i < result.length - 1; i=i+2) {
 					
@@ -105,13 +106,11 @@ class Decoder implements Runnable {
 						resultStr = resultStr + "0" ;
 					else if (result[i] == 1 && result[i+1] == 0)
 						resultStr = resultStr + "1" ;
-				}
+				}*/
 				
 				System.out.println("Frame "+ frame.number+": " + resultStr + "// " + frame.timestamp);
 
-				
-				
-				if(resultStr.equals("0000")){
+				/*if(resultStr.equals("0000")){
 					
 					System.out.println("Message Start!!!");
 					binaryString = "";
@@ -123,11 +122,12 @@ class Decoder implements Runnable {
 				}
 				
 				resultStr = "";
-				
+				*/
 				
 				
 				if(binaryString.length() == CamCallback.bits) {
 					
+					System.out.println("---------------------------------");
 					System.out.println(binaryString);
 					
 					
@@ -135,14 +135,17 @@ class Decoder implements Runnable {
 						//System.out.println(binaryString);
 						
 						int charCode = Integer.parseInt(binaryString, 2);
-						String str = new Character((char)charCode).toString();
-						//System.out.println("Character: "+str);
+						final String str = new Character((char)charCode).toString();
+						//System.out.println("Character: "+ str);
+						final String binaryString2 = binaryString;
+						//message = message + str;
 						
-						message = message + str;
-						
-						System.out.println(message);
-						//MainActivity.debugging.setText("Bits:" + str + "...Decoding...");
-						
+						System.out.println(str);
+						handler.post(new Runnable(){
+							public void run() {
+								MainActivity.debugging.setText("ID: " + binaryString2 + " (= " + str + ")");
+							}
+						});
 						/*
 						MainActivity.runOnUiThread(new Runnable() {
 				            @Override
@@ -153,11 +156,11 @@ class Decoder implements Runnable {
 				        });
 				        */
 						
-						MainActivity.handler.post(new Runnable() {
+						/*MainActivity.handler.post(new Runnable() {
 							public void run() {
 								MainActivity.message.setText(Decoder.message);
 							}
-						});
+						});*/
 						
 						
 					}
@@ -166,25 +169,11 @@ class Decoder implements Runnable {
 					
 				}
 				
-				
-
-
-				
-				
-				
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
-			
-			
-			
-			
 		}
-		
-
-		
 	}
 	
 

@@ -40,7 +40,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
-public class MainActivity extends Activity implements SensorEventListener {
+  public class MainActivity extends Activity implements SensorEventListener {
   private SurfaceView preview=null;
   private SurfaceHolder previewHolder=null;
   private Camera camera=null;
@@ -62,8 +62,6 @@ public class MainActivity extends Activity implements SensorEventListener {
   //int checkLight = 0;
 
 
-
-  
   CamCallback camCallback;
   public static CamPreview camPreview;
 
@@ -85,15 +83,13 @@ public class MainActivity extends Activity implements SensorEventListener {
 	
     static Context context;
     
-    static TextView debugging;
-    static TextView message;
+    public static TextView debugging;
+    public static TextView message;
     
     static Handler handler;
     
     static int initiator = 0;
 
-
-  
   
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -115,11 +111,8 @@ public class MainActivity extends Activity implements SensorEventListener {
     RelativeLayout preview = (RelativeLayout) findViewById(R.id.cameraView); 
     preview.addView(camPreview);
     
-    
-    
-    
+
     //create buttons
-    
    
     processButton = new Button(this);
     processButton.setText("Process");
@@ -154,14 +147,14 @@ public class MainActivity extends Activity implements SensorEventListener {
     lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);  
     preview.addView(turnLightOn, lp);*/
     
-    beginTransmission = new Button(this);
+    /*beginTransmission = new Button(this);
     beginTransmission.setText("Begin");
     beginTransmission.setId(5);
     beginTransmission.setPadding(50,50,50,50);
     lp = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
     lp.addRule(RelativeLayout.ALIGN_PARENT_RIGHT); 
     lp.addRule(RelativeLayout.CENTER_IN_PARENT);
-    preview.addView(beginTransmission, lp);
+    preview.addView(beginTransmission, lp);*/
     
     
     
@@ -210,15 +203,12 @@ public class MainActivity extends Activity implements SensorEventListener {
     
     delayFile = new File(path, "delay"+camCallback.sleep+".txt");*/
     
-  
+    context = getApplicationContext();
 
     // Attach a callback for preview
     camCallback = new CamCallback();
     mCamera.setPreviewCallback(camCallback);
-    
-    
-    context = getApplicationContext();
-    
+        
     
 /*    CharSequence text = "Hello toast!";
     int duration = Toast.LENGTH_LONG;
@@ -309,7 +299,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 			@Override
 			public void onClick(View arg0) {
 				
-				camPreview.setExposureCompensation(-20);
+				//camPreview.setExposureCompensation(-20);
 				//camPreview.setIsoValue(200);
 			}
 
@@ -365,7 +355,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 
 		});*/
   	
-  	beginTransmission = (Button) findViewById(5);
+  	/*beginTransmission = (Button) findViewById(5);
 	 
   	beginTransmission.setOnClickListener(new OnClickListener() {
 
@@ -376,7 +366,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 				//sendData();	
 			}
 
-		});
+		});*/
   	
   	
   }
