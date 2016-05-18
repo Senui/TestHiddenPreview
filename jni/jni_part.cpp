@@ -24,7 +24,7 @@ float pow2roundup (int x);
 int roundUp(int numToRound, int multiple);
 Mat clahe(Mat gray_image);
 Mat histogramEqualization(Mat input);
-void detector(Mat input, int returnMatrix[3]);
+void detector(Mat input, vector< vector<int> > &returnMatrix);
 Mat adaptiveThreshold(Mat input);
 Mat blur(Mat input);
 void getMiddlePixels(Mat input, int centerRadius[3], vector<int>& pixels);
@@ -64,49 +64,29 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode(JN
 
 	jbyte * pNV21FrameData = env->GetByteArrayElements(NV21FrameData, 0);
 
+	// get image
+	Mat gray_image(height, width, CV_8UC1, (unsigned char *) pNV21FrameData);
+
 	clock_t begin, end;
 	double time_spent;
 
+	vector<vector<int> > returnMatrix(5, vector<int>(3)); // contains center positions and radii of blobs
+	detector(gray_image, returnMatrix);
 
 	int centerRadius[3];
 
-	centerRadius[0] = centerColumn;
-	centerRadius[1] = centerRow;
-	centerRadius[2] = blobRadius;
+	centerRadius[0] = returnMatrix[0][0];
+	centerRadius[1] = returnMatrix[0][1];
+	centerRadius[2] = ceil(returnMatrix[0][2]*1.5);
 
+	//delete[] returnMatrix;
 
 	//LOGE("column = %d", centerRadius[0]);
 	//LOGE("row = %d", centerRadius[1]);
 	//LOGE("radius = %d", centerRadius[2]);
 
-
-	// get image
-	Mat gray_image(height, width, CV_8UC1, (unsigned char *) pNV21FrameData);
-
-/*
-	if(averageBlobPixelsForLight(gray_image, centerColumn, centerRow, blobRadius) < 2){
-
-		//prepare result
-			jint fill[1];
-
-			fill[0] = 0;
-
-
-			jintArray result;
-			result = env->NewIntArray(1);
-			env->SetIntArrayRegion(result, 0, 1, fill);
-
-			env->ReleaseByteArrayElements(NV21FrameData, pNV21FrameData, JNI_ABORT);
-
-			LOGE("NO LIGHT");
-			return result;
-
-
-	}
-*/
-
 	begin = clock();
-
+	// enhance image contrast
 	Mat adaptive_equalized = clahe(gray_image); //the image that will be processed
 
 	end = clock();
@@ -122,7 +102,7 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode(JN
 
 	begin = clock();
 
-
+	// blur image
 	Mat blurred = blur(adaptive_equalized);
 
 	end = clock();
@@ -139,12 +119,13 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode(JN
 	adaptive_equalized.release();
 
 	begin = clock();
-
-
+	//OTSU image (converts gray to binary)
 	Mat adaptive_threshold = adaptiveThreshold(blurred);
 
-	//imshow("otsuImage", adaptive_threshold);
-	string file = "/storage/emulated/0/Pictures/";
+	//namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display.
+	//imshow( "Display window", adaptive_threshold );
+	string file = "/storage/emulated/0/";
+	imwrite(file + "greyImage.jpg", gray_image);
 	imwrite(file + "otsuImage.jpg", adaptive_threshold);
 
 	end = clock();
@@ -153,28 +134,75 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode(JN
 
 	//LOGE("thres =  %.5f . \n", time_spent * 1000);
 
+	/*begin = clock();
+	Mat element = getStructuringElement(MORPH_RECT, Size(15, 15));
+	Mat erode_img;
+	erode(adaptive_threshold, erode_img, element);
+	erode(erode_img, erode_img, element);
+	imwrite(file + "otsuImage1.jpg", erode_img);
+	end = clock();*/
 
+	///////////////////////////////////
+	// simleBlobDetector START
+	///////////////////////////////////
 
-	//blurred.release();
+	/*// Setup SimpleBlobDetector parameters.
+	SimpleBlobDetector::Params params;
 
+	// Filter by Color.
+	params.filterByColor = true;
+	params.blobColor = 255;
 
+	// Filter by Area.
+	params.filterByArea = true;
+	params.minArea = 15000;
 
+	// Filter by Circularity
+	params.filterByCircularity = true;
+	params.minCircularity = 0.9;
+
+	// Filter by Convexity
+	params.filterByConvexity = true;
+	params.minConvexity = 0.87;
+
+	// Filter by Inertia
+	params.filterByInertia = true;
+	params.minInertiaRatio = 0.8;
+
+	  // Set up detector with params
+	  SimpleBlobDetector detector(params);
+
+	// Detect blobs.
+	std::vector<KeyPoint> keypoints;
+	detector.detect( adaptive_threshold, keypoints);
+
+	// Draw detected blobs as red circles.
+	// DrawMatchesFlags::DRAW_RICH_KEYPOINTS flag ensures the size of the circle corresponds to the size of blob
+	Mat im_with_keypoints;
+	drawKeypoints( adaptive_threshold, keypoints, im_with_keypoints, Scalar(0,0,255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
+
+	// Show blobs
+	imwrite(file + "simpleBlobDetector.jpg", im_with_keypoints);*/
+
+	///////////////////////////////////
+	// simpleBlobDetector END
+	///////////////////////////////////
 
 	begin = clock();
 
 
+	//blurred.release();
 
-	int offset = avoidBlobOffset(adaptive_threshold , centerRadius);
+	begin = clock();
 
+	int offset = avoidBlobOffset(adaptive_threshold, centerRadius);
 
 	//cout << "offset " << offsetBlobStart[0] << "\n";
-
-
-
 
 	vector<int> correctedPixels;
 
 	getCorrectedPixelsOffset(adaptive_threshold, centerRadius, offset, correctedPixels);
+	imwrite(file + "line_image.jpg", correctedPixels);
 
 	//getCorrectedPixelsCenterOffset(adaptive_threshold, centerRadius, offsetBlobStart, correctedPixels );
 
@@ -265,7 +293,7 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_DistanceCalculato
 
 	begin = clock();
 
-	detector(adaptive_equalized, centerRadius);
+	//detector(adaptive_equalized, centerRadius);
 
 	end = clock();
 	time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
@@ -295,19 +323,14 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_DistanceCalculato
 
 	LOGE("DONE");
 	return result;
-
-
-
-
-
 }
 
 
 /*
 
 JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_CamCallback_ImageProcessing2(JNIEnv* env, jobject thiz, jint width, jint height,
-		jbyteArray NV21FrameData, jintArray outPixels) {
-
+		jbyteArray NV21FrameData, jintArray outPixels)
+{
 	jbyte * pNV21FrameData = env->GetByteArrayElements(NV21FrameData, 0);
 	jint * poutPixels = env->GetIntArrayElements(outPixels, 0);
 
@@ -734,7 +757,7 @@ void decodeBits(vector<int>& inputPixels, vector<int>& detectedBits){
 
 		dif = falls[i] - peaks[i];
 
-		if ( dif >= 2.5 *8 ){
+		if ( dif >= 2.5 *16 ){ //freq = 3000 -> 2.5*8
 			if( j == 1 ){
 				if(i == 0)
 					continue;
@@ -774,7 +797,7 @@ void decodeBits(vector<int>& inputPixels, vector<int>& detectedBits){
 
 		dif = peaks[firstPreamble +j] - falls[firstPreamble + j -1];
 
-		if(dif > 1.3 * 8 ){
+		if(dif > 1.3 * 16 ){ //freq = 3000 -> 2.5*8
 			if(j == 1 || firstPreamble + j == secondPreamble){
 				//cout << "0" << "\n";
 				detectedBits.push_back(0);
@@ -800,7 +823,7 @@ void decodeBits(vector<int>& inputPixels, vector<int>& detectedBits){
 
 		dif = falls[firstPreamble +j] - peaks[firstPreamble + j];
 
-		if(dif > 1.5 * 8 ){
+		if(dif > 1.5 * 16 ){ //freq = 3000 -> 2.5*8
 			detectedBits.push_back(1);
 			detectedBits.push_back(1);
 			if(firstPreamble + j +1 == secondPreamble)
@@ -818,10 +841,6 @@ void decodeBits(vector<int>& inputPixels, vector<int>& detectedBits){
 		j++;
 
 	}
-
-
-
-
 }
 
 void getCorrectedPixelsCenterOffset(Mat input, int centerRadius[3], vector<int>& offsetBlobStart, vector<int>& correctPixels ){
@@ -882,14 +901,14 @@ void avoidBlobCenterOffset(vector<int>& inputPixels, vector<int>& offsetBlobStar
 
 		int dif = falls[i] - peaks[i];
 
-		if (dif > 28){
+		if (dif > 56){ //freq = 3000 -> dif > 28
 
 			if(blobStart == 0){
 				blobStart = peaks[i];
 			}
 
 		}
-		else if (dif < 20 && blobStart != 0 ){
+		else if (dif < 40 && blobStart != 0 ){
 			blobEnd = falls[i-1];
 			break;
 		}
@@ -925,7 +944,6 @@ int avoidBlobOffset(Mat input, int centerRadius[3]){
 		for(int i = top ; i< bottom ; i++){
 
 			pixels.push_back(input.at<unsigned char>(i, column));
-
 		}
 
 
@@ -938,13 +956,14 @@ int avoidBlobOffset(Mat input, int centerRadius[3]){
 			if(pixels[i] == 0 && pixels[i+1] == 255){
 				peaks.push_back(i);
 				//printf("On: %d \n", i);
+				//fflush(stdout);
 
 			}
 			else if(pixels[i] == 255 && pixels[i+1] == 0 && peaks.size() !=0){
 				falls.push_back(i);
 				//printf("Off: %d \n", i);
+				//fflush(stdout);
 			}
-
 		}
 
 		int noBlob = 0;
@@ -953,7 +972,7 @@ int avoidBlobOffset(Mat input, int centerRadius[3]){
 
 			int dif = falls[i] - peaks[i];
 
-			if (dif > 3 * 8){
+			if (dif > 3 * 16){ //freq = 3000 -> 3*8
 				column = column - 1;
 				noBlob = 1;
 			}
@@ -961,13 +980,9 @@ int avoidBlobOffset(Mat input, int centerRadius[3]){
 
 		if(noBlob == 0)
 			break;
-
-
 	}
 
-
 	return centerRadius[0] - column;
-
 }
 void getCorrectedPixelsOffset(Mat input, int centerRadius[3], int offset, vector<int>& correctPixels ){
 
@@ -989,9 +1004,6 @@ void getCorrectedPixelsOffset(Mat input, int centerRadius[3], int offset, vector
 		correctPixels.push_back(input.at<unsigned char>(i, centerRadius[0] - offset) );
 
 	}
-
-
-
 }
 
 
@@ -1301,53 +1313,53 @@ Mat clahe(Mat input){
 }
 
 
-void detector(Mat input, int returnMatrix[3] ){
+void detector(Mat input, vector< vector<int> > &returnMatrix){
 
+  Mat blurred_image;
+  blur(input, blurred_image, Size(100, 100));
 
-	//Blur image
-	Mat blurred_image;
-	blur(input, blurred_image, Size(100, 100));
+  /*Mat erode_img;
+  Mat element = getStructuringElement(MORPH_RECT, Size(15, 15));
+  erode(blurred_image, erode_img, element);*/
 
-	//OTSU filter
-	Mat thresholded_image;
-	threshold(blurred_image, thresholded_image, 0, 255, THRESH_BINARY + THRESH_OTSU);
+  Mat otsu;
+  threshold(blurred_image, otsu, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
 
-	//find contours
-	vector<vector<Point> > contours;
-	findContours(thresholded_image, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
+  Mat cimg = input;
 
-	LOGE("contours = %d", contours.size());
+  vector<vector<Point> > contours;
+  vector<Point2i> center;
+  vector<int> radius;
 
+  findContours(otsu.clone(), contours, CV_RETR_TREE, CV_CHAIN_APPROX_NONE);
 
+  size_t count = contours.size();
 
+  for( size_t i=0; i < count; i++)
+  {
+	  Point2f c;
+	  float r;
+	  minEnclosingCircle( contours[i], c, r);
 
-	// Find minEnclosingCircle centers and radius
-	vector<Point2f> center(contours.size());
-	vector<float> radius(contours.size());
+	  if (r >= 50)
+	  {
+		  center.push_back(c);
+		  radius.push_back(r);
+	  }
+  }
 
-	int contourCenterX = 0;
-	int contourCenterY = 0;
-	int contourRadius = 0;
-	for (int i = 0; i < contours.size(); i++) {
+  int count2 = center.size();
+  cv::Scalar red(255,255,255);
 
-		minEnclosingCircle((Mat) contours[i], center[i], radius[i]);
+  returnMatrix.resize(count2);
 
-		int centerX = ceil(center[i].x);
-		int centerY = ceil(center[i].y);
-		int circleRadius = ceil(radius[i]);
-
-		if(circleRadius > contourRadius){
-
-			returnMatrix[0] = centerX;
-			returnMatrix[1] = centerY;
-			returnMatrix[2] = circleRadius;
-		}
-
-
-	}
-
-
-
-
+  for( int i = 0; i < count2; i++)
+  {
+	  circle(input, center[i], radius[i], red, 3);
+	  returnMatrix[i][0] = center[i].x;
+	  returnMatrix[i][1] = center[i].y;
+	  returnMatrix[i][2] = radius[i];
+	  //cout << radius[i];
+  }
 }
 
