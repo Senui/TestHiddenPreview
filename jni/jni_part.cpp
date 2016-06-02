@@ -38,12 +38,14 @@ void avoidBlobCenterOffset(vector<int>& inputPixels, vector<int>& offsetBlobStar
 void getCorrectedPixelsCenterOffset(Mat input, int centerRadius[3], vector<int>& offsetBlobStart, vector<int>& correctPixels );
 
 int avoidBlobOffset(Mat input, int centerRadius[3]);
-void getCorrectedPixelsOffset(Mat input, int centerRadius[3], int offset, vector<int>& correctPixels );
+//void getCorrectedPixelsOffset(Mat input, int centerRadius[3], int offset, vector<int>& correctPixels );
+//void decodeBits(vector<int>& inputPixels, vector<int>& detectedBits);
 
-
-void decodeBits(vector<int>& inputPixels, vector<int>& detectedBits);
-
-
+void segment(Mat fullImage, vector<Mat> &segmentedImages, vector< vector<int> > &returnMatrix );
+void processSegment(Mat segment, vector<int> &detectedBits);
+void fillHole(const Mat srcBw, Mat &dstBw);
+void getCorrectedPixelsOffset(Mat input, vector<int>& correctPixels );
+void decodeBits(vector<int>& inputPixels, vector<int> &detectedBits);
 
 
 JNIEXPORT void JNICALL Java_com_example_testhiddenpreview_CamCallback_fftProcessing(JNIEnv* env, jobject thiz, jint width, jint height,jbyteArray NV21FrameData);
@@ -66,184 +68,68 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode(JN
 
 	// get image
 	Mat gray_image(height, width, CV_8UC1, (unsigned char *) pNV21FrameData);
+	Mat gray_image_copy = gray_image.clone();
 
 	clock_t begin, end;
 	double time_spent;
 
 	vector<vector<int> > returnMatrix(5, vector<int>(3)); // contains center positions and radii of blobs
-	detector(gray_image, returnMatrix);
-
-	int centerRadius[3];
-
-	centerRadius[0] = returnMatrix[0][0];
-	centerRadius[1] = returnMatrix[0][1];
-	centerRadius[2] = ceil(returnMatrix[0][2]*1.5);
-
-	//delete[] returnMatrix;
-
-	//LOGE("column = %d", centerRadius[0]);
-	//LOGE("row = %d", centerRadius[1]);
-	//LOGE("radius = %d", centerRadius[2]);
-
-	begin = clock();
-	// enhance image contrast
-	Mat adaptive_equalized = clahe(gray_image); //the image that will be processed
-
-	end = clock();
-
-	time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
-
-	//LOGE("CLAHE =  %.5f . \n", time_spent * 1000);
-
-
-
-	//gray_image.release();
-
-
-	begin = clock();
-
-	// blur image
-	Mat blurred = blur(adaptive_equalized);
-
-	end = clock();
-
-	time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
-
-	//LOGE("Blur =  %.5f . \n", time_spent * 1000);
-
-	/*
-	Mat blurred;
-	blur(adaptive_equalized, blurred, Size(3, 3));
-
-*/
-	adaptive_equalized.release();
-
-	begin = clock();
-	//OTSU image (converts gray to binary)
-	Mat adaptive_threshold = adaptiveThreshold(blurred);
-
-	//namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display.
-	//imshow( "Display window", adaptive_threshold );
-	string file = "/storage/emulated/0/";
-	imwrite(file + "greyImage.jpg", gray_image);
-	imwrite(file + "otsuImage.jpg", adaptive_threshold);
-
-	end = clock();
-
-	time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
-
-	//LOGE("thres =  %.5f . \n", time_spent * 1000);
-
-	/*begin = clock();
-	Mat element = getStructuringElement(MORPH_RECT, Size(15, 15));
-	Mat erode_img;
-	erode(adaptive_threshold, erode_img, element);
-	erode(erode_img, erode_img, element);
-	imwrite(file + "otsuImage1.jpg", erode_img);
-	end = clock();*/
-
-	///////////////////////////////////
-	// simleBlobDetector START
-	///////////////////////////////////
-
-	/*// Setup SimpleBlobDetector parameters.
-	SimpleBlobDetector::Params params;
-
-	// Filter by Color.
-	params.filterByColor = true;
-	params.blobColor = 255;
-
-	// Filter by Area.
-	params.filterByArea = true;
-	params.minArea = 15000;
-
-	// Filter by Circularity
-	params.filterByCircularity = true;
-	params.minCircularity = 0.9;
-
-	// Filter by Convexity
-	params.filterByConvexity = true;
-	params.minConvexity = 0.87;
-
-	// Filter by Inertia
-	params.filterByInertia = true;
-	params.minInertiaRatio = 0.8;
-
-	  // Set up detector with params
-	  SimpleBlobDetector detector(params);
-
-	// Detect blobs.
-	std::vector<KeyPoint> keypoints;
-	detector.detect( adaptive_threshold, keypoints);
-
-	// Draw detected blobs as red circles.
-	// DrawMatchesFlags::DRAW_RICH_KEYPOINTS flag ensures the size of the circle corresponds to the size of blob
-	Mat im_with_keypoints;
-	drawKeypoints( adaptive_threshold, keypoints, im_with_keypoints, Scalar(0,0,255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
-
-	// Show blobs
-	imwrite(file + "simpleBlobDetector.jpg", im_with_keypoints);*/
-
-	///////////////////////////////////
-	// simpleBlobDetector END
-	///////////////////////////////////
-
-	begin = clock();
-
-
-	//blurred.release();
-
-	begin = clock();
-
-	int offset = avoidBlobOffset(adaptive_threshold, centerRadius);
-
-	//cout << "offset " << offsetBlobStart[0] << "\n";
-
-	vector<int> correctedPixels;
-
-	getCorrectedPixelsOffset(adaptive_threshold, centerRadius, offset, correctedPixels);
-	imwrite(file + "line_image.jpg", correctedPixels);
-
-	//getCorrectedPixelsCenterOffset(adaptive_threshold, centerRadius, offsetBlobStart, correctedPixels );
-
-
-	//adaptive_threshold.release();
-
-
-	vector<int> detectedBits;
-
-
-	decodeBits(correctedPixels, detectedBits);
-
-	//detectedBits.push_back(0);
-	end = clock();
-
-
-	time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
-
-	//LOGE("Decode =  %.5f . \n", time_spent * 1000);
-
-	//prepare result
-	jint fill[detectedBits.size()];
-
-	for(int i=0; i<detectedBits.size(); i++){
-		fill[i] = detectedBits[i];
-	}
-
-
-
-	jintArray result;
-	result = env->NewIntArray(detectedBits.size());
-	env->SetIntArrayRegion(result, 0, detectedBits.size(), fill);
-
-
-
-	env->ReleaseByteArrayElements(NV21FrameData, pNV21FrameData, JNI_ABORT);
-
-	//LOGE("DONE");
-	return result;
-
-
+	detector(gray_image_copy, returnMatrix);
+
+	// -- Segment image in N pieces and put each segment in segmentedImages--
+	vector<Mat> segmentedImages(returnMatrix.size());
+	segment(gray_image, segmentedImages, returnMatrix);
+
+  // -- Process each segment and decode id --
+  int codeLength = 3; // Length of id (see Arduino code)
+  int allCodes = 1*codeLength;
+
+  if (returnMatrix.size() != 0){
+		vector<vector<int> > detectedBits(returnMatrix.size(), vector<int>(codeLength));
+
+		for (unsigned int i = 0; i < segmentedImages.size(); i ++){
+			detectedBits[i].clear();
+			if (countNonZero(segmentedImages[i] > 1))
+				processSegment(segmentedImages[i], detectedBits[i]);
+			else { //case when blob is on the image border (TODO: make better solution)
+				vector<int> emptyVector(codeLength, 0);
+				detectedBits[i] = emptyVector;
+			}
+		}
+
+
+		//prepare result (TODO send all detected bits back or compute AoA here)
+		jint fill[allCodes];
+
+
+		/*for(int i=0; i < codeLength; i++){
+			fill[i] = detectedBits[0][i];
+		}*/
+
+		int p = 0;
+		for (unsigned int j = 0; j < detectedBits.size(); j++){
+			cout << "Lamp " << j << ": ";
+			for (int k = 0; k < codeLength; k++)
+			{
+				fill[p] = detectedBits[j][k];
+				p++;
+			}
+		}
+
+		jintArray result;
+		result = env->NewIntArray(allCodes);
+		env->SetIntArrayRegion(result, 0, allCodes, fill);
+
+		env->ReleaseByteArrayElements(NV21FrameData, pNV21FrameData, JNI_ABORT);
+		return result;
+  }
+  else{
+  	jint fill[1] = {0};
+  	jintArray result;
+		result = env->NewIntArray(1);
+		env->SetIntArrayRegion(result, 0, 1, fill);
+  	return result;
+  }
 }
 
 
@@ -326,175 +212,6 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_DistanceCalculato
 }
 
 
-/*
-
-JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_CamCallback_ImageProcessing2(JNIEnv* env, jobject thiz, jint width, jint height,
-		jbyteArray NV21FrameData, jintArray outPixels)
-{
-	jbyte * pNV21FrameData = env->GetByteArrayElements(NV21FrameData, 0);
-	jint * poutPixels = env->GetIntArrayElements(outPixels, 0);
-
-
-	clock_t begin, end;
-	double time_spent;
-
-
-
-	// get image
-	Mat gray_image(height, width, CV_8UC1, (unsigned char *) pNV21FrameData);
-
-
-	begin = clock();
-
-
-	//apply adaptive histogram equalization
-	Mat adaptive_equalized = clahe(gray_image);
-
-	end = clock();
-	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-
-
-	LOGE("CLAHE =  %.5f . \n", time_spent * 1000);
-
-
-
-
-
-	//find transmitter
-	int centerRadius[3];
-
-
-	begin = clock();
-
-
-	detector(adaptive_equalized, centerRadius);
-
-	end = clock();
-	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-
-
-	LOGE("Detector =  %.5f . \n", time_spent * 1000);
-
-	//cout << "centerColumn: " << centerRadius[0] << " centerRow: " << centerRadius[1] << " radius: " << centerRadius[2] << std::endl;
-
-	int centerColumn = centerRadius[0];
-	int centerRow = centerRadius[1];
-	int circleRadius = centerRadius[2];
-
-
-	//Mat equalized = histogramEqualization(gray_image);
-
-
-	begin = clock();
-
-	//blur for smoothing
-	Mat blurred = blur(adaptive_equalized);
-
-	end = clock();
-	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-
-
-	LOGE("Blur =  %.5f . \n", time_spent * 1000);
-
-
-
-
-	begin = clock();
-
-	//adaptive threshold
-	Mat adaptive_threshold = adaptiveThreshold(blurred);
-
-	end = clock();
-	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-
-
-	LOGE("Threshold =  %.5f . \n", time_spent * 1000);
-
-	vector<int> pixels;
-
-	//column row radius
-	LOGE("%d %d %d\n", centerRadius[0], centerRadius[1], centerRadius[2]);
-
-	begin = clock();
-
-	//get pixel values
-	getPixels(adaptive_threshold, centerRadius, pixels);
-
-	end = clock();
-	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-
-
-	LOGE("FindPixels =  %.5f . \n", time_spent * 1000);
-
-	LOGE("Done Middle");
-
-	//cout << middlePixels.size() << std::endl;
-
-	for (int i = 0; i < pixels.size(); i++) {
-		//cout << middlePixels[i] << std::endl;
-	}
-
-
-	//center values to zero
-	vector<int> centeredToZero;
-
-
-	begin = clock();
-
-	centerToZero(pixels, centeredToZero);
-
-	end = clock();
-	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-
-
-	LOGE("Center =  %.5f . \n", time_spent * 1000);
-
-	LOGE("Done Centering");
-
-	for (int i = 0; i < centeredToZero.size(); i++) {
-		//cout << centeredToZero[i] << std::endl;
-	}
-
-	vector<int> detectedBits;
-
-
-	begin = clock();
-
-	detectBits(centeredToZero, detectedBits);
-
-
-	end = clock();
-	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-
-
-	LOGE("Detect =  %.5f . \n", time_spent * 1000);
-
-
-	LOGE("Done Looking");
-
-
-	//prepare result
-	jint fill[detectedBits.size()];
-
-	for(int i=0; i<detectedBits.size(); i++){
-		fill[i] = detectedBits[i];
-	}
-
-	jintArray result;
-	result = env->NewIntArray(detectedBits.size());
-	env->SetIntArrayRegion(result, 0, detectedBits.size(), fill);
-
-	env->ReleaseByteArrayElements(NV21FrameData, pNV21FrameData, 0);
-	env->ReleaseIntArrayElements(outPixels, poutPixels, 0);
-
-	LOGE("DONE");
-	return result;
-
-}
-
-*/
-
-
 JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_CamCallback_ImageProcessing(JNIEnv* env, jobject thiz, jint width, jint height,
 		jbyteArray NV21FrameData) {
 
@@ -517,7 +234,7 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_CamCallback_Image
 	for (int i = 0; i < thresholded_image.rows; i++) {
 
 		middle_column[i] = thresholded_image.at<unsigned char>(i,
-				thresholded_image.cols / 2 - 1);
+		thresholded_image.cols / 2 - 1);
 		//printf("%d\n", middle_column[i]);
 
 	}
@@ -604,244 +321,13 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_CamCallback_Image
 }
 
 
-
-
-
 JNIEXPORT void JNICALL Java_com_example_testhiddenpreview_CamCallback_fftProcessing(JNIEnv* env, jobject thiz, jint width, jint height,jbyteArray NV21FrameData) {
-
-
-
 	jbyte * pNV21FrameData = env->GetByteArrayElements(NV21FrameData, 0);
 
 	Mat gray_image(height, width, CV_8UC1, (unsigned char *) pNV21FrameData);
-
-
-	/*//Blur image
-	Mat blurred_image;
-	blur(gray_image, blurred_image, Size(50, 50));
-
-	//OTSU filter
-	Mat thresholded_image;
-	threshold(blurred_image, thresholded_image, 0, 255,
-			THRESH_BINARY + THRESH_OTSU);
-
-	//find contours
-	vector<vector<Point> > contours;
-	findContours(thresholded_image, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
-
-	// Find minEnclosingCircle centers and radius
-	vector<Point2f> center(contours.size());
-	vector<float> radius(contours.size());
-
-	for (int i = 0; i < contours.size(); i++) {
-		minEnclosingCircle((Mat) contours[i], center[i], radius[i]);
-	}
-
-	//cout << "centerColumn:" << ceil(center[0].x) << " centerRow" << ceil(center[0].y) << " radius: "<< ceil(radius[0]) << std::endl;
-
-	int centerColumn = ceil(center[0].x);
-	int centerRow = ceil(center[0].y);
-	int circleRadius = ceil(radius[0]);
-
-	//LOGE("x = %d  y= %d", centerColumn, centerRow );
-
-	circle(mRgb, Point(centerColumn, centerRow), 3, Scalar(0, 255, 0), -1, 8, 0);
-
-	circle(mRgb, Point(centerColumn, centerRow), circleRadius, Scalar(0, 0, 255), 10);
-
-	//find middle column of enclosingCircle
-	unsigned char value;
-
-	Mat middle_column = Mat(2 * circleRadius, 1, gray_image.type(), Scalar(0));
-	int middle_rows = middle_column.rows;
-	int middle_columns = middle_column.cols;
-
-	//printf("middle_rows: %d , middle_columns: %d \n", middle_rows, middle_columns);
-
-	int startRow = centerRow - circleRadius;
-	if (startRow < 0)
-		startRow = 0;
-	int endRow = centerRow + circleRadius;
-	if (endRow > gray_image.rows)
-		endRow = gray_image.rows;
-
-	int j = 0;
-	for (int i = startRow; i < endRow; i++) {
-		//printf("%d\n",j);
-		//printf("%d\n",i);
-		value = gray_image.at<unsigned char>(i, centerColumn);
-		middle_column.at<unsigned char>(j, 0) = value;
-		j++;
-	}
-
-	// Go float
-	Mat fImage;
-	middle_column.convertTo(fImage, CV_32F);
-
-	Mat planes[] = { Mat_<float>(middle_column), Mat::zeros(middle_column.size(), CV_32F) };
-
-	//LOGE("Success");
-
-	// FFT
-	Mat fourierTransform;
-	dft(fImage, fourierTransform, cv::DFT_SCALE | cv::DFT_COMPLEX_OUTPUT);
-
-	split(fourierTransform, planes); // planes[0] = Re(DFT(I), planes[1] = Im(DFT(I))
-
-	magnitude(planes[0], planes[1], planes[0]);         // planes[0] = magnitude
-	Mat magI = planes[0];
-
-	//find the index of relative maxima
-	float value2;
-	float previous, next;
-	float relative_maxima = 0;
-	int index = 0;
-	for (int i = 1; i < magI.rows - 1; i++) {
-
-		value2 = magI.at<float>(i, 0);
-		previous = magI.at<float>(i - 1, 0);
-		next = magI.at<float>(i + 1, 0);
-
-		if (previous < value2 && next < value2 && value2 > relative_maxima) {
-			relative_maxima = value2;
-			index = i;
-		}
-	}
-
-	double max_frequency;
-	float rolling_shutter_rate = 1.0 / 64800.0;
-	float Fs = 1.0 / rolling_shutter_rate;
-	float NFFT = 1024.0;
-	max_frequency = index * (Fs / NFFT);
-
-	LOGE("MaxFrequency = %f", max_frequency);*/
-
 	return;
-
 }
 
-
-
-void decodeBits(vector<int>& inputPixels, vector<int>& detectedBits){
-
-
-	//find peaks and falls
-	std::vector<int> peaks;
-	std::vector<int> falls;
-
-	int dif, nextDif;
-
-	for (int i = 0; i < inputPixels.size()-1; i++){
-
-		if(inputPixels[i] == 0 && inputPixels[i+1] == 255){
-			peaks.push_back(i);
-			//printf("On: %d \n", i);
-
-		}
-		else if(inputPixels[i] == 255 && inputPixels[i+1] == 0 && peaks.size() !=0){
-			falls.push_back(i);
-			//printf("Off: %d \n", i);
-		}
-
-	}
-
-
-	if(peaks.size() > falls.size())
-		peaks.erase(peaks.begin() + peaks.size() - 1);
-
-	int j = 1;
-	int firstPreamble=0;
-	int secondPreamble=0;
-
-	for (int i = 0; i < peaks.size(); i++){
-
-		dif = falls[i] - peaks[i];
-
-		if ( dif >= 2.5 *16 ){ //freq = 3000 -> 2.5*8
-			if( j == 1 ){
-				if(i == 0)
-					continue;
-				firstPreamble = i;
-				j++;
-			}
-			else{
-
-				//nextDif = falls[i+1] - peaks[i+1];
-				//if(nextDif < 20 ){
-
-					//if(i == firstPreamble + 1)
-						//continue;
-
-
-
-					secondPreamble = i;
-					break;
-				//}
-			}
-
-		}
-
-	}
-
-	if(secondPreamble == 0)
-		return;
-
-	//cout << "first " << firstPreamble << " second " << secondPreamble<< "\n" ;
-
-
-	j = 1;
-	int addZero = 0;
-
-
-	while(true){
-
-		dif = peaks[firstPreamble +j] - falls[firstPreamble + j -1];
-
-		if(dif > 1.3 * 16 ){ //freq = 3000 -> 2.5*8
-			if(j == 1 || firstPreamble + j == secondPreamble){
-				//cout << "0" << "\n";
-				detectedBits.push_back(0);
-			}
-			else{
-				detectedBits.push_back(0);
-				detectedBits.push_back(0);
-
-				//cout << "0" << "\n";
-				//cout << "/0" << "\n";
-			}
-		}
-		else{
-			if((j != 1 && firstPreamble + j != secondPreamble) || addZero == 1){
-				//cout << "0" << "\n";
-				detectedBits.push_back(0);
-			}
-		}
-
-
-		if (firstPreamble + j == secondPreamble)
-			break;
-
-		dif = falls[firstPreamble +j] - peaks[firstPreamble + j];
-
-		if(dif > 1.5 * 16 ){ //freq = 3000 -> 2.5*8
-			detectedBits.push_back(1);
-			detectedBits.push_back(1);
-			if(firstPreamble + j +1 == secondPreamble)
-				addZero = 1;
-			//cout << "1" << "\n";
-			//cout << "/1" << "\n";
-		}
-		else{
-			//cout << "1" << "\n";
-			detectedBits.push_back(1);
-
-		}
-
-
-		j++;
-
-	}
-}
 
 void getCorrectedPixelsCenterOffset(Mat input, int centerRadius[3], vector<int>& offsetBlobStart, vector<int>& correctPixels ){
 
@@ -984,28 +470,6 @@ int avoidBlobOffset(Mat input, int centerRadius[3]){
 
 	return centerRadius[0] - column;
 }
-void getCorrectedPixelsOffset(Mat input, int centerRadius[3], int offset, vector<int>& correctPixels ){
-
-	float factor = 1;
-	int newRadius = ceil(centerRadius[2] * factor);
-
-	int top = centerRadius[1] - newRadius;
-	int bottom = centerRadius[1] + newRadius;
-
-	if(top < 0){
-		top = 0;
-	}
-	if(bottom > input.rows){
-		bottom = input.rows;
-	}
-
-	for(int i = top ; i< bottom ; i++){
-
-		correctPixels.push_back(input.at<unsigned char>(i, centerRadius[0] - offset) );
-
-	}
-}
-
 
 
 int roundUp(int numToRound, int multiple)
@@ -1032,139 +496,128 @@ float pow2roundup (int x)
 void detectBits(vector<int>& inputPixels, vector<int>& detectedBits){
 
 	//find peaks and falls
-	std::vector<int> peaks;
-	std::vector<int> falls;
+		std::vector<int> peaks;
+		std::vector<int> falls;
 
-	for (int i = 0; i < inputPixels.size()-1; i++){
+		int freq = 1500; // fill in preamble freq from arduino code
+		int factor = ceil(24000/freq);
 
-		if(inputPixels[i] == 0 && inputPixels[i+1] == 1){
-			peaks.push_back(i);
+		int dif;
 
-		}
-		else if(inputPixels[i] == 1 && inputPixels[i+1] == 0 && peaks.size() !=0){
-			falls.push_back(i);
-		}
+		for (unsigned int i = 0; i < inputPixels.size() - 1; i++){
 
-	}
-
-
-	if(peaks.size() == 0 || falls.size() == 0){
-
-		return;
-	}
-
-	//remove very short pixel preambles
-	for (int i = 0; i < falls.size(); i++) {
-		//printf("Dif = %d \n", falls[i]- peaks[i]);
-		if (falls[i] - peaks[i] < 4) {
-			falls.erase(falls.begin() + i);
-			peaks.erase(peaks.begin() + i);
-			//printf("Erased \n");
-			//update index cause item was removed
-			i = i - 1;
-			if (i < 0)
-				i = 0;
-		}
-
-	}
-
-	int preambleDif = 0;
-
-	//find preambles
-	std::vector<int> preambles;
-	for (int i = 0; i < peaks.size() - 2; i++) {
-		//printf("%d \n", peaks[i]);
-
-		int firstdif = peaks[i + 1] - peaks[i];
-
-		int seconddif = peaks[i + 2] - peaks[i + 1];
-
-		//if two preambles
-		if (seconddif < 1.5 * firstdif) {
-
-			//check if a whole packet is included
-			if (i + 4 <= peaks.size() - 1) {
-
-				int thirddif = peaks[i + 3] - peaks[i + 2];
-				//avoid confusion with two on bits
-				if (thirddif < firstdif)
-					continue;
-
-				int fourthdif = peaks[i + 4] - peaks[i + 3];
-				if (fourthdif < seconddif)
-					continue;
-
-				LOGE("preambe = %d", i);
-				preambles.push_back(i);
-
-				//calculate average of preample ON size
-				preambleDif = ((falls[i] - peaks[i])
-						+ (falls[i + 1] - peaks[i + 1])) / 2;
-
-				//cout << preambleDif << std::endl;
-
+			if(inputPixels[i] == 0 && inputPixels[i+1] == 255){
+				peaks.push_back(i);
+				//printf("Peak On: %d \n", i);
 			}
-			i = i + 3;
-		}
-	}
 
-
-
-	LOGE("preambleDif = %d", preambleDif);
-
-
-//	cout << preambleDif << std::endl;
-
-	for (int i = 0; i < preambles.size(); i++){
-
-		int preamble = preambles[i];
-		int firstBitDif = peaks[preamble+3] - peaks[preamble+2];
-		int secondBitDif = peaks[preamble+4] - peaks[preamble+3];
-
-		int onPeriodFirstBit = falls[preamble+2] - peaks[preamble+2];
-		int onPeriodSecondBit = falls[preamble+3] - peaks[preamble+3];
-
-
-		//LOGE("first = %d", onPeriodFirstBit);
-		//LOGE("second = %d", onPeriodSecondBit);
-
-
-		//cout << onPeriodFirstBit << std::endl;
-
-		//cout << onPeriodSecondBit << std::endl;
-
-		float factor = 1.5;
-
-		if (onPeriodFirstBit > factor * preambleDif && onPeriodSecondBit > factor * preambleDif){
-			detectedBits.push_back(1);
-		}
-		else if (onPeriodFirstBit > factor * preambleDif && onPeriodSecondBit < factor * preambleDif){
-			detectedBits.push_back(2);
-		}
-		else if (onPeriodFirstBit < factor * preambleDif && onPeriodSecondBit > factor * preambleDif){
-			detectedBits.push_back(3);
-		}
-		else if (onPeriodFirstBit < factor * preambleDif && onPeriodFirstBit < factor * preambleDif){
-			detectedBits.push_back(4);
+			else if(inputPixels[i] == 255 && inputPixels[i+1] == 0 && peaks.size() !=0){
+				falls.push_back(i);
+				//printf("Fall On: %d \n", i);
+			}
 		}
 
-		/*
-		if (onPeriodFirstBit > firstBitDif/2 && onPeriodSecondBit > secondBitDif/2){
-			printf("Found 1\n");
+		if(peaks.size() > falls.size())
+			peaks.erase(peaks.begin() + peaks.size() - 1);
+
+		int j = 1;
+		int firstPreamble=0;
+		int secondPreamble=0;
+		// preamble looks like: 01110
+
+		for (unsigned int i = 0; i < peaks.size(); i++){
+
+			dif = falls[i] - peaks[i];
+			//cout << dif << ' ';
+
+			if ( dif >= 2.5 *factor ){ // look for the big white bars (the 111s in 01110s)
+				if( j == 1 ){
+					if(i == 0)
+						continue;
+					firstPreamble = i; // set the first big white bar to firstPreamble
+					j++;
+				}
+				else{
+					secondPreamble = i; // set the second big white bar to firstPreamble
+					break;
+				}
+			}
 		}
-		else if (onPeriodFirstBit > firstBitDif/2 && onPeriodSecondBit < secondBitDif/2){
-			printf("Found 2\n");
-		}
-		else if (onPeriodFirstBit < firstBitDif/2 && onPeriodSecondBit > secondBitDif/2){
-			printf("Found 3\n");
-		}
-		else if (onPeriodFirstBit < firstBitDif/2 && onPeriodSecondBit < secondBitDif/2){
-			printf("Found 4\n");
-		}
-		*/
+
+		if(secondPreamble == 0)
+			return;
+
+		cout << "first " << firstPreamble << " second " << secondPreamble<< "\n" ;
 
 
-	}
+		j = 1;
+		int addZero = 0;
+
+
+		while(true){
+
+			// the black bars that are between the first and second preamble
+			dif = peaks[firstPreamble + j] - falls[firstPreamble + j -1];
+
+			cout << dif << ' ';
+
+			if(dif > 1.0 * factor && dif < 1.1*factor ){ // if black bar is one periode
+				if(j == 1 || firstPreamble + j == secondPreamble){ // if it is one of the 0s in 01110
+					//cout << "0" << "\n";
+					detectedBits.push_back(0); // detect it as a single 0
+				}
+				else{
+					detectedBits.push_back(0);
+					detectedBits.push_back(0);
+
+					//cout << "0" << "\n";
+					//cout << "/0" << "\n";
+				}
+			}
+			else if (dif >= 1.1*factor) {
+				if (dif > 2.6 * factor){ // if we get 00 after the last preamble 0
+					detectedBits.push_back(0);
+					detectedBits.push_back(0);
+				}
+				else{ // if we get only 0 after the last preamble 0
+					detectedBits.push_back(0);
+				}
+			}
+
+			else {
+				if((j != 1 && firstPreamble + j != secondPreamble) || addZero == 1){
+					//cout << "0" << "\n";
+					detectedBits.push_back(0);
+				}
+			}
+
+
+			if (firstPreamble + j == secondPreamble){
+			  for (unsigned int i = 0; i < detectedBits.size(); i++)
+				  cout << detectedBits[i] << ' ';
+				break;
+			}
+
+			// the white bars that are between the first and second preamble
+			dif = falls[firstPreamble +j] - peaks[firstPreamble + j];
+
+			cout << dif << ' ';
+
+			if(dif > 1.5 * factor ){
+				detectedBits.push_back(1);
+				detectedBits.push_back(1);
+				if(firstPreamble + j +1 == secondPreamble)
+					addZero = 1;
+				//cout << "1" << "\n";
+				//cout << "/1" << "\n";
+			}
+			else{
+				//cout << "1" << "\n";
+				detectedBits.push_back(1);
+			}
+
+			j++;
+		}
 
 }
 
@@ -1315,15 +768,17 @@ Mat clahe(Mat input){
 
 void detector(Mat input, vector< vector<int> > &returnMatrix){
 
-  Mat blurred_image;
-  blur(input, blurred_image, Size(100, 100));
+	string file = "/storage/emulated/0/";
 
-  /*Mat erode_img;
-  Mat element = getStructuringElement(MORPH_RECT, Size(15, 15));
-  erode(blurred_image, erode_img, element);*/
+  Mat blurred_image;
+  // blur strength depends on how big the black bars are
+  // (else can be seen as separate blobs)
+  blur(input, blurred_image, Size(150,150));
 
   Mat otsu;
   threshold(blurred_image, otsu, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+
+	imwrite(file + "otsuBlobImage.jpg", otsu);
 
   Mat cimg = input;
 
@@ -1355,11 +810,212 @@ void detector(Mat input, vector< vector<int> > &returnMatrix){
 
   for( int i = 0; i < count2; i++)
   {
-	  circle(input, center[i], radius[i], red, 3);
+	  //circle(input, center[i], radius[i], red, 3);
 	  returnMatrix[i][0] = center[i].x;
 	  returnMatrix[i][1] = center[i].y;
 	  returnMatrix[i][2] = radius[i];
-	  //cout << radius[i];
   }
+
+	imwrite(file + "greyImage.jpg", input);
 }
+
+void segment(Mat fullImage, vector<Mat> &segmentedImages, vector< vector<int> > &returnMatrix ){
+
+	int p1, p2;
+		for (int i = 0; i < segmentedImages.size(); i++){
+			int radius = returnMatrix[i][2];
+			if (returnMatrix[i][0] - ceil(1.25*radius) >= 0) //check if it falls outside border
+				p1 = returnMatrix[i][0] - ceil(1.25*radius); // x-coordinate of top left point
+			else
+				p1 = 0;
+
+			if ( returnMatrix[i][1] - ceil(1.25*radius) >= 0) //check if it falls outside border
+				p2 = returnMatrix[i][1] - ceil(1.25*radius); // y-coordinate of top left point
+			else
+				p2 = 0;
+
+		if (returnMatrix[i][0] + ceil(1.25*radius) <= fullImage.cols && returnMatrix[i][1] + ceil(1.25*radius) <= fullImage.rows){
+			Rect rect(p1, p2, ceil(2.5*radius), ceil(2.5*radius));
+			fullImage(rect).copyTo(segmentedImages[i]);
+			string file = "/storage/emulated/0/";
+			imwrite(file + "segImages.jpg", segmentedImages[i]);
+		}
+		else //if image falls outside border, make empty matrix (TODO: make better solution)
+			segmentedImages[i] = Mat::zeros(1, 1, CV_8U);
+	}
+}
+
+void processSegment(Mat segment, vector<int> &detectedBits){
+
+	// Enhance image contrast
+	Mat adaptive_equalized;
+	Ptr<CLAHE> clahe = createCLAHE();
+	clahe->setClipLimit(10);
+	clahe->setTilesGridSize(Size(8,8));
+	clahe->apply(segment, adaptive_equalized);
+
+	// Blur image
+	Mat blurred_segment;
+	blur(adaptive_equalized, blurred_segment, Size(3, 3));
+
+	//OTSU image (converts gray to binary)
+	Mat adaptive, adaptive0;
+	//adaptiveThreshold(blurred_segment, adaptive0, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 105, 2);
+	threshold(blurred_segment, adaptive, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+	/*imshow("ad", adaptive);
+	waitKey(0);
+	imshow("ad", adaptive0);
+	waitKey(0);*/
+
+	// Remove noise
+	//Mat filled_adaptive;
+	//fillHole(adaptive, filled_adaptive);
+	//imshow("ad", filled_adaptive);
+	//waitKey(0);
+
+	// Get decode line
+	vector<int> correctedPixels;
+	getCorrectedPixelsOffset(adaptive, correctedPixels);
+	//imwrite("line.jpg", correctedPixels);
+
+	decodeBits(correctedPixels, detectedBits);
+}
+
+void fillHole(const Mat srcBw, Mat &dstBw)
+{
+	Size m_Size = srcBw.size();
+	Mat Temp=Mat::zeros(m_Size.height+2,m_Size.width+2,srcBw.type());
+	srcBw.copyTo(Temp(Range(1, m_Size.height + 1), Range(1, m_Size.width + 1)));
+
+	floodFill(Temp, Point(0, 0), Scalar(255));
+
+	Mat cutImg;
+	Temp(Range(1, m_Size.height + 1), Range(1, m_Size.width + 1)).copyTo(cutImg);
+
+	dstBw = srcBw | (~cutImg);
+}
+
+void getCorrectedPixelsOffset(Mat input, vector<int>& correctPixels ){
+
+	int top = 0;
+	int bottom = input.rows;
+
+	for(int i = top ; i < bottom ; i++){
+		correctPixels.push_back(input.at<unsigned char>(i, 0.5*input.cols) );
+	}
+}
+
+void decodeBits(vector<int>& inputPixels, vector<int> &detectedBits){
+	  //find peaks and falls
+		std::vector<int> peaks;
+		std::vector<int> falls;
+
+		int freq = 2500; // fill in preamble freq from arduino code
+		int factor = ceil(24000/freq);
+
+		int dif;
+
+		for (unsigned int i = 0; i < inputPixels.size() - 1; i++){
+
+			if(inputPixels[i] == 0 && inputPixels[i+1] == 255){
+				peaks.push_back(i);
+				//printf("Peak On: %d \n", i);
+			}
+
+			else if(inputPixels[i] == 255 && inputPixels[i+1] == 0 && peaks.size() !=0){
+				falls.push_back(i);
+				//printf("Fall On: %d \n", i);
+			}
+		}
+
+		if(peaks.size() > falls.size())
+			peaks.erase(peaks.begin() + peaks.size() - 1);
+
+		int j = 1;
+		int firstPreamble=0;
+		int secondPreamble=0;
+		// preamble looks like: 01110
+
+		for (unsigned int i = 0; i < peaks.size(); i++){
+
+			dif = falls[i] - peaks[i];
+			//cout << dif << ' ';
+
+			if ( dif >= 2.5 *factor ){ // look for the big white bars (the 111s in 01110s)
+				if( j == 1 ){
+					//if(i == 0)
+						//continue;
+					firstPreamble = i; // set the first big white bar to firstPreamble
+					j++;
+				}
+				else{
+					secondPreamble = i; // set the second big white bar to firstPreamble
+					break;
+				}
+			}
+		}
+
+		if(secondPreamble == 0)
+			return;
+
+		cout << "first " << firstPreamble << " second " << secondPreamble<< "\n" ;
+
+
+		j = 1;
+		int addZero = 0;
+
+
+		while(true){
+
+			// the black bars that are between the first and second preamble
+			dif = peaks[firstPreamble + j] - falls[firstPreamble + j -1];
+
+			cout << dif << ' ';
+
+			if (dif >= 1.1*factor) {
+				if (dif > 2.0 * factor){ // if we get 00 after the last preamble 0
+					detectedBits.push_back(0);
+					detectedBits.push_back(0);
+				}
+				else{ // if we get only 0 after the last preamble 0
+					detectedBits.push_back(0);
+				}
+			}
+
+			else {
+				if((j != 1 && firstPreamble + j != secondPreamble) || addZero == 1){
+					//cout << "0" << "\n";
+					detectedBits.push_back(0);
+				}
+			}
+
+
+			if (firstPreamble + j == secondPreamble){
+			  for (unsigned int i = 0; i < detectedBits.size(); i++)
+				  cout << detectedBits[i] << ' ';
+				break;
+			}
+
+			// the white bars that are between the first and second preamble
+			dif = falls[firstPreamble +j] - peaks[firstPreamble + j];
+
+			cout << dif << ' ';
+
+			if(dif > 1.5 * factor ){
+				detectedBits.push_back(1);
+				detectedBits.push_back(1);
+				if(firstPreamble + j +1 == secondPreamble)
+					addZero = 1;
+				//cout << "1" << "\n";
+				//cout << "/1" << "\n";
+			}
+			else{
+				//cout << "1" << "\n";
+				detectedBits.push_back(1);
+			}
+
+			j++;
+		}
+}
+
 
