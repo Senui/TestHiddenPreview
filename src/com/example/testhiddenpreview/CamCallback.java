@@ -41,7 +41,7 @@ public class CamCallback implements Camera.PreviewCallback{
     
     static int lightOn = 0;
     
-    static int bits = 3;
+    static int bits = 2;
     
     public static LinkedBlockingDeque<FrameData> frameQueue; 
 

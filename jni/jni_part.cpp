@@ -18,6 +18,12 @@ using namespace cv;
 
 Mat * mCanny = NULL;
 
+vector<vector<double> > lampLocations {
+		{-24.5, 168, 0},
+		{2.5, 130, 8},
+		{36, 166, 5}
+};
+
 extern "C" {
 
 float pow2roundup (int x);
@@ -46,6 +52,7 @@ void processSegment(Mat segment, vector<int> &detectedBits);
 void fillHole(const Mat srcBw, Mat &dstBw);
 void getCorrectedPixelsOffset(Mat input, vector<int>& correctPixels );
 void decodeBits(vector<int>& inputPixels, vector<int> &detectedBits);
+void angleOfArrival(double loc[], vector< vector<int> > &returnMatrix);
 
 
 JNIEXPORT void JNICALL Java_com_example_testhiddenpreview_CamCallback_fftProcessing(JNIEnv* env, jobject thiz, jint width, jint height,jbyteArray NV21FrameData);
@@ -59,10 +66,9 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_DistanceCalculato
 
 JNIEXPORT jint JNICALL Java_com_example_testhiddenpreview_LightChecker_lightCheck(JNIEnv* env, jobject thiz, jint width, jint height,jbyteArray NV21FrameData);
 
-JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode(JNIEnv* env, jobject thiz, jint width, jint height,jbyteArray NV21FrameData, jint centerRow, jint centerColumn, jint blobRadius );
+JNIEXPORT jdoubleArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode(JNIEnv* env, jobject thiz, jint width, jint height,jbyteArray NV21FrameData, jint centerRow, jint centerColumn, jint blobRadius );
 
-JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode(JNIEnv* env, jobject thiz, jint width, jint height,jbyteArray NV21FrameData, jint centerRow, jint centerColumn, jint blobRadius ){
-
+JNIEXPORT jdoubleArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode(JNIEnv* env, jobject thiz, jint width, jint height,jbyteArray NV21FrameData, jint centerRow, jint centerColumn, jint blobRadius ){
 
 	jbyte * pNV21FrameData = env->GetByteArrayElements(NV21FrameData, 0);
 
@@ -84,7 +90,7 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode(JN
   int codeLength = 3; // Length of id (see Arduino code)
   int allCodes = 1*codeLength;
 
-  if (returnMatrix.size() != 0){
+  if (returnMatrix.size() != 0){ //if we got some result
 		vector<vector<int> > detectedBits(returnMatrix.size(), vector<int>(codeLength));
 
 		for (unsigned int i = 0; i < segmentedImages.size(); i ++){
@@ -97,16 +103,23 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode(JN
 			}
 		}
 
+		double location[3];
+		int dimensions = sizeof(location)/sizeof(*location);
+		angleOfArrival(location, returnMatrix); // TODO: use least squares method for localization
 
-		//prepare result (TODO send all detected bits back or compute AoA here)
+
+		//////////////////////////
+		// SEND BACK DETECTED BITS (START)
+		//////////////////////////
+
+/*		//prepare result (TODO: send all detected bits back or compute AoA here)
 		jint fill[allCodes];
 
-
-		/*for(int i=0; i < codeLength; i++){
+		for(int i=0; i < codeLength; i++){
 			fill[i] = detectedBits[0][i];
-		}*/
+		}
 
-		int p = 0;
+	int p = 0;
 		for (unsigned int j = 0; j < detectedBits.size(); j++){
 			cout << "Lamp " << j << ": ";
 			for (int k = 0; k < codeLength; k++)
@@ -121,13 +134,29 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode(JN
 		env->SetIntArrayRegion(result, 0, allCodes, fill);
 
 		env->ReleaseByteArrayElements(NV21FrameData, pNV21FrameData, JNI_ABORT);
-		return result;
+		return result;*/
+
+		//////////////////////////
+		// SEND BACK DETECTED BITS (END)
+		//////////////////////////
+
+		jdouble fillCoordinates[dimensions];
+		for(int i = 0; i < dimensions; i++){
+			fillCoordinates[i] = location[i];
+		}
+
+		jdoubleArray coordinates;
+		coordinates = env->NewDoubleArray(dimensions);
+		env->SetDoubleArrayRegion(coordinates, 0, dimensions, fillCoordinates);
+
+		env->ReleaseByteArrayElements(NV21FrameData, pNV21FrameData, JNI_ABORT);
+		return coordinates;
   }
   else{
-  	jint fill[1] = {0};
-  	jintArray result;
-		result = env->NewIntArray(1);
-		env->SetIntArrayRegion(result, 0, 1, fill);
+  	jdouble fill[1] = {0};
+  	jdoubleArray result;
+		result = env->NewDoubleArray(1);
+		env->SetDoubleArrayRegion(result, 0, 1, fill);
   	return result;
   }
 }
@@ -191,7 +220,6 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_DistanceCalculato
 	int centerColumn = centerRadius[0];
 	int centerRow = centerRadius[1];
 	int circleRadius = centerRadius[2];
-
 
 	//prepare result
 	jint fill[3];
@@ -1018,4 +1046,60 @@ void decodeBits(vector<int>& inputPixels, vector<int> &detectedBits){
 		}
 }
 
+void angleOfArrival(double loc[], vector< vector<int> > &returnMatrix){
+	double Lx1 = lampLocations[0][0];
+	double Lx2 = lampLocations[1][0];
+	double Lx3 = lampLocations[2][0];
+
+	double Ly1 = lampLocations[0][1];
+	double Ly2 = lampLocations[1][1];
+	double Ly3 = lampLocations[2][1];
+
+	double Lz1 = lampLocations[0][2];
+	double Lz2 = lampLocations[1][2];
+	double Lz3 = lampLocations[2][2];
+
+	int a1 = returnMatrix[2][0]-960;
+	int a2 = returnMatrix[0][0]-960;
+	int a3 = returnMatrix[1][0]-960;
+	int b1 = 540-returnMatrix[2][1];
+	int b2 = 540-returnMatrix[0][1];
+	int b3 = 540-returnMatrix[1][1];
+
+	/*cout << "a1 = " << a1 << endl;
+	cout << "a2 = " << a2 << endl;
+	cout << "a3 = " << a3 << endl;
+	cout << "b1 = " << b1 << endl;
+	cout << "b2 = " << b2 << endl;
+	cout << "b3 = " << b3 << endl;*/
+
+	//cout << "Lx2 = "<< a1 << endl;
+
+	double k1 = (Lx1*b3-Lx3*b3-Ly1*a3+Ly3*a3)/(a1*b3-a3*b1);
+	double k2 = (Lx1*a3*b1+Lx2*a1*b3-Lx2*a3*b1-Lx3*a1*b3-Ly1*a1*a3+Ly3*a1*a3)/((a1*b3-a3*b1)*a2);
+	double k3 = (Lx1*b1-Lx3*b1-Ly1*a1+Ly3*a1)/(a1*b3-a3*b1);
+
+	double Xc1 = Lx1 - k1*a1;
+	double Xc2 = Lx2 - k2*a2;
+	double Xc3 = Lx3 - k3*a3;
+
+	double Yc1 = Ly1 - k1*b1;
+	double Yc2 = Ly2 - k2*b2;
+	double Yc3 = Ly3 - k3*b3;
+
+	//double Zf = (Lz1 - Lz3) / (k1 - k3);
+	double Zf = 1604;
+
+	double Zc1 = Lz1 + k1*Zf;
+	double Zc2 = Lz2 + k2*Zf;
+	double Zc3 = Lz3 + k3*Zf;
+
+	double Z_avg = (Zc1 + Zc2 + Zc3)/3;
+	double X_avg = (Xc1 + Xc2 + Xc3)/3;
+	double Y_avg = (Yc1 + Yc2 + Yc3)/3;
+
+	loc[0] = X_avg;
+	loc[1] = Y_avg;
+	loc[2] = Z_avg;
+}
 

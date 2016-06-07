@@ -1,5 +1,7 @@
 package com.example.testhiddenpreview;
 
+import java.util.Locale;
+
 import android.os.Handler;
 import android.util.Log;
 
@@ -11,7 +13,7 @@ class Decoder implements Runnable {
 	Handler handler = new Handler();
 	private static final String TAG = "Decoder Thread";
 	
-	int[] result;
+	double[] result;
 
 	Decoder() {
 	}
@@ -57,6 +59,7 @@ class Decoder implements Runnable {
 				CamCallback.BlobRadius = 160;
 				
 				//System.gc();
+				//result = decode(1920, 1080, frame.data, CamCallback.centerRow, CamCallback.centerColumn, CamCallback.BlobRadius);
 				result = decode(1920, 1080, frame.data, CamCallback.centerRow, CamCallback.centerColumn, CamCallback.BlobRadius);
 				
 				//result = new int[0];
@@ -85,13 +88,14 @@ class Decoder implements Runnable {
 						continue;
 					}
 				}
-				
+								
 				StringBuilder bitstring = new StringBuilder();
 				for (int i = 0; i < result.length; i++) {
-					System.out.print(result[i]);
-					bitstring.append(result[i]);
+					System.out.print(String.format(Locale.US, "---%.2f---", result[i]));
+					bitstring.append(String.format(Locale.US, "%.2f, ", result[i]));
 				}
 				
+				bitstring.append("Z");
 				binaryString = bitstring.toString();
 				
 				System.out.print("\n");
@@ -125,7 +129,7 @@ class Decoder implements Runnable {
 				*/
 				
 				
-				if(binaryString.length() == CamCallback.bits) {
+				if(binaryString.length() != 0) {
 					
 					System.out.println("---------------------------------");
 					System.out.println(binaryString);
@@ -134,16 +138,17 @@ class Decoder implements Runnable {
 					if(started == 1 ){
 						//System.out.println(binaryString);
 						
-						int charCode = Integer.parseInt(binaryString, 2);
-						final String str = new Character((char)charCode).toString();
+						//int charCode = Integer.parseInt(binaryString, 2);
+						//final String str = new Character((char)charCode).toString();
 						//System.out.println("Character: "+ str);
 						final String binaryString2 = binaryString;
 						//message = message + str;
 						
-						System.out.println(str);
+						//System.out.println(str);
 						handler.post(new Runnable(){
 							public void run() {
-								MainActivity.debugging.setText("ID: " + binaryString2);
+								//MainActivity.debugging.setText("ID: " + binaryString2);
+								MainActivity.debugging.setText("Location:" + binaryString2);
 							}
 						});
 						/*
@@ -181,6 +186,7 @@ class Decoder implements Runnable {
 		System.loadLibrary("jni_part");
 	}
 
-	public native int[] decode(int width, int height, byte[] NV21FrameData, int centerRow, int centerColumn, int blobRadius);
+	//public native int[] decode(int width, int height, byte[] NV21FrameData, int centerRow, int centerColumn, int blobRadius);
+	public native double[] decode(int width, int height, byte[] NV21FrameData, int centerRow, int centerColumn, int blobRadius);
 }
 
