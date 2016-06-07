@@ -17,6 +17,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.ImageFormat;
 import android.hardware.Camera;
+import android.hardware.Camera.Parameters;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -60,6 +61,8 @@ import android.widget.ToggleButton;
   //private Sensor mLight;
   
   //int checkLight = 0;
+  private static final float MAX_EXPOSURE_COMPENSATION = 0.5f;
+  private static final float MIN_EXPOSURE_COMPENSATION = -20.0f;
 
 
   CamCallback camCallback;
@@ -87,6 +90,7 @@ import android.widget.ToggleButton;
     public static TextView message;
     
     static Handler handler;
+    Parameters parameters;
     
     static int initiator = 0;
 
@@ -94,7 +98,6 @@ import android.widget.ToggleButton;
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    
     
     setContentView(R.layout.activity_main);
     
@@ -105,6 +108,10 @@ import android.widget.ToggleButton;
     Camera mCamera = Camera.open(0);
     camPreview = new CamPreview(this,mCamera);
     camPreview.setSurfaceTextureListener(camPreview);
+    
+    
+    parameters = mCamera.getParameters();
+    //System.out.println(parameters.flatten());
 
     // Connect the preview object to a FrameLayout in your UI
     // You'll have to create a FrameLayout object in your UI to place this preview in
@@ -123,7 +130,7 @@ import android.widget.ToggleButton;
     preview.addView(processButton, lp);
     
     exposureCompButton = new Button(this);
-    exposureCompButton.setText("ExpComp");
+    exposureCompButton.setText("BestExp");
     exposureCompButton.setId(2);
     exposureCompButton.setPadding(50,50,50,50);
     lp = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
@@ -137,25 +144,6 @@ import android.widget.ToggleButton;
     lp = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
     lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);  
     preview.addView(lockCameraParams, lp);
-    
-    /*turnLightOn = new Button(this);
-    turnLightOn.setText("LightOn");
-    turnLightOn.setId(4);
-    turnLightOn.setPadding(50,50,50,50);
-    lp = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-    lp.addRule(RelativeLayout.ALIGN_PARENT_RIGHT); 
-    lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);  
-    preview.addView(turnLightOn, lp);*/
-    
-    /*beginTransmission = new Button(this);
-    beginTransmission.setText("Begin");
-    beginTransmission.setId(5);
-    beginTransmission.setPadding(50,50,50,50);
-    lp = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-    lp.addRule(RelativeLayout.ALIGN_PARENT_RIGHT); 
-    lp.addRule(RelativeLayout.CENTER_IN_PARENT);
-    preview.addView(beginTransmission, lp);*/
-    
     
     
     //create TextViews
@@ -183,26 +171,6 @@ import android.widget.ToggleButton;
     
     addListenerOnButton();
     
-    
-    
-    //create communication with accessory
-    
-    /*mUsbManager = UsbManager.getInstance(this);
-	mPermissionIntent = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), 0);
-	IntentFilter filter = new IntentFilter(ACTION_USB_PERMISSION);
-	filter.addAction(UsbManager.ACTION_USB_ACCESSORY_DETACHED);
-	registerReceiver(mUsbReceiver, filter);
-
-	if (getLastNonConfigurationInstance() != null) {
-		mAccessory = (UsbAccessory) getLastNonConfigurationInstance();
-		openAccessory(mAccessory);
-	}
-
-
-	File path = Environment.getExternalStoragePublicDirectory("Documents");
-    
-    delayFile = new File(path, "delay"+camCallback.sleep+".txt");*/
-    
     context = getApplicationContext();
 
     // Attach a callback for preview
@@ -217,8 +185,6 @@ import android.widget.ToggleButton;
     toast.show();*/
     
     handler = new Handler();
-
-    
   }
   
   
@@ -280,31 +246,37 @@ import android.widget.ToggleButton;
 
   	processButton.setOnClickListener(new OnClickListener() {
 
-			@Override
-			public void onClick(View arg0) {
-				
-				if(!camCallback.enableProcess)
-					camCallback.enableProcess = true;
-				else
-					camCallback.enableProcess = false;
-					            				 
-			}
-
-		});
+		@Override
+		public void onClick(View arg0) {
+			
+			if(!camCallback.enableProcess)
+				camCallback.enableProcess = true;
+			else
+				camCallback.enableProcess = false;			            				 
+		}
+	});
   	
   	exposureCompButton = (Button) findViewById(2);
   	 
   	exposureCompButton.setOnClickListener(new OnClickListener() {
 
-			@Override
-			public void onClick(View arg0) {
-				
-				//camPreview.setExposureCompensation(-20);
-				//camPreview.setIsoValue(200);
-			}
+		@Override
+		public void onClick(View arg0) {
+			int expComp = -4;
+			String isoValue = "100";
+						
+			/*parameters.set("min-exposure-compensation", expComp);
+			parameters.setAutoExposureLock(true);
+			parameters.setExposureCompensation(expComp);
+			System.out.println("Exposure Compensation set to " + Integer.toString(expComp));
+			*/
+			//parameters.set("iso", isoValue);
+			//System.out.println("Exposure Compensation set to " + isoValue);
+			
+			camPreview.mCamera.setParameters(parameters);
+		}
+	});
 
-		});
-  	
   	lockCameraParams = (Button) findViewById(3);
  	 
   	lockCameraParams.setOnClickListener(new OnClickListener() {
@@ -332,246 +304,10 @@ import android.widget.ToggleButton;
         			// TODO Auto-generated catch block
         			e1.printStackTrace();
         		} 
-
-
-
 			}
-
 		});
-  	
-  	
-  	/*turnLightOn = (Button) findViewById(4);
- 	 
-  	turnLightOn.setOnClickListener(new OnClickListener() {
-
-			@Override
-			public void onClick(View arg0) {
-				
-				initiator = 1;
-				
-				blinkLED();
-				
-			}
-
-		});*/
-  	
-  	/*beginTransmission = (Button) findViewById(5);
-	 
-  	beginTransmission.setOnClickListener(new OnClickListener() {
-
-			@Override
-			public void onClick(View arg0) {
-				
-				//sendBitNumber(CamCallback.bits);
-				//sendData();	
-			}
-
-		});*/
-  	
-  	
   }
-  
-  
-  
-  /*private void openAccessory(UsbAccessory accessory) {
-		mFileDescriptor = mUsbManager.openAccessory(accessory);
-		if (mFileDescriptor != null) {
-			mAccessory = accessory;
-			FileDescriptor fd = mFileDescriptor.getFileDescriptor();
-			mInputStream = new FileInputStream(fd);
-			mOutputStream = new FileOutputStream(fd);
-			Log.d(TAG, "accessory opened");
-		} else {
-			Log.d(TAG, "accessory open fail");
-		}
-	}
-
-
-	private void closeAccessory() {
-		try {
-			if (mFileDescriptor != null) {
-				mFileDescriptor.close();
-			}
-		} catch (IOException e) {
-		} finally {
-			mFileDescriptor = null;
-			mAccessory = null;
-		}
-	}
-	
-	
-	
-	public static void blinkLED(){
-
-		byte[] buffer = new byte[1];
-		
-		//turn LightON
-		buffer[0]=(byte)1;
-		if (mOutputStream != null) {
-			try {
-				mOutputStream.write(buffer);
-			} catch (IOException e) {
-				Log.e(TAG, "write failed", e);
-			}
-		}
-
-		
-		try {
-			Thread.sleep(2000);
-		} catch (InterruptedException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} 
-		
-		sendBitsAndData(8);
-		
-		try {
-			Thread.sleep(2000);
-		} catch (InterruptedException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} 
-		
-		beginTransmission();
-		
-		
-		// change mode
-		buffer[0]=(byte)2; 
-		if (mOutputStream != null) {
-			try {
-				mOutputStream.write(buffer);
-			} catch (IOException e) {
-				Log.e(TAG, "write failed", e);
-			}
-		}
-		
-		
-	}*/
-	
-	/*static public void beginTransmission(){
-		
-		
-		byte[] buffer = new byte[1];
-		
-		buffer[0]=(byte)3;
-		if (mOutputStream != null) {
-			try {
-				mOutputStream.write(buffer);
-			} catch (IOException e) {
-				Log.e(TAG, "write failed", e);
-			}
-		}
-		
-	}
-
-	
-	static public void sendBitsAndData(int bits){
-
-		
-		byte[] buffer = new byte[1];
-		
-		buffer[0]=(byte)2;
-		if (mOutputStream != null) {
-			try {
-				mOutputStream.write(buffer);
-			} catch (IOException e) {
-				Log.e(TAG, "write failed", e);
-			}
-		}
-		
-		buffer[0]=(byte) bits;
-		if (mOutputStream != null) {
-			try {
-				mOutputStream.write(buffer);
-			} catch (IOException e) {
-				Log.e(TAG, "write failed", e);
-			}
-		}
-		
-		String message = "hello";
-		byte[] buffer2;
-		buffer2 = message.getBytes();
-		
-		if (mOutputStream != null) {
-			try {
-				mOutputStream.write(buffer2);
-			} catch (IOException e) {
-				Log.e(TAG, "write failed", e);
-			}
-		}
-		
-		
-		
-	}
-	
-	
-	static public void sendBitNumber(int bits){
-		
-		byte[] buffer = new byte[1];
-		
-	
-		buffer[0]=(byte) bits;
-		if (mOutputStream != null) {
-			try {
-				mOutputStream.write(buffer);
-			} catch (IOException e) {
-				Log.e(TAG, "write failed", e);
-			}
-		}
-		
-		
-		
-	}
-	
-	static public void sendData(){
-		
-		String message = "hello world";
-		byte[] buffer;
-		buffer = message.getBytes();
-		
-		if (mOutputStream != null) {
-			try {
-				mOutputStream.write(buffer);
-			} catch (IOException e) {
-				Log.e(TAG, "write failed", e);
-			}
-		}
-	
-		
-		
-		
-		
-	}*/
-
-  
-  
-  /*private final BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
-		@Override
-		public void onReceive(Context context, Intent intent) {
-			String action = intent.getAction();
-			if (ACTION_USB_PERMISSION.equals(action)) {
-				synchronized (this) {
-					UsbAccessory accessory = UsbManager.getAccessory(intent);
-					if (intent.getBooleanExtra(
-							UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
-						openAccessory(accessory);
-					} else {
-						Log.d(TAG, "permission denied for accessory "
-								+ accessory);
-					}
-					mPermissionRequestPending = false;
-				}
-			} else if (UsbManager.ACTION_USB_ACCESSORY_DETACHED.equals(action)) {
-				UsbAccessory accessory = UsbManager.getAccessory(intent);
-				if (accessory != null && accessory.equals(mAccessory)) {
-					closeAccessory();
-				}
-			}
-		}
-	};*/
-
-
-
+  	
 
 @Override
 public final void onAccuracyChanged(Sensor sensor, int accuracy) {

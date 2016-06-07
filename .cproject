@@ -7,6 +7,7 @@
 				<extensions>
 					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
 					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
@@ -14,13 +15,19 @@
 					<folderInfo id="0.1615692213." name="/" resourcePath="">
 						<toolChain id="com.android.toolchain.gcc.401156366" name="Android GCC" superClass="com.android.toolchain.gcc" unusedChildren="com.android.gcc.compiler">
 							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="com.android.targetPlatform.275416258" isAbstract="false" superClass="com.android.targetPlatform"/>
-							<builder arguments="" buildPath="${workspace_loc:/TestHiddenPreview}" command="${NDKROOT}/ndk-build.cmd" enableCleanBuild="false" id="com.android.builder.752392418" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Android Builder" superClass="com.android.builder"/>
-							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.cygwin.665775363" name="Cygwin C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.cygwin">
-								<option id="gnu.cpp.compiler.option.include.paths.708464862" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;E:\NVPACK\OpenCV-2.4.8.2-Tegra-sdk\sdk\native\jni\include&quot;"/>
+							<builder arguments="NDK_DEBUG=1" buildPath="${workspace_loc:/TestHiddenPreview}" command="ndk-build" enableCleanBuild="false" id="com.android.builder.752392418" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Android Builder" superClass="com.android.builder"/>
+							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.cygwin.1141923366" name="Cygwin C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.cygwin">
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1994725925" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
+									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
+									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
+								</inputType>
+							</tool>
+							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.base.2012570349" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base">
+								<option id="gnu.cpp.compiler.option.include.paths.1564983000" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;E:\NVPACK\android-ndk-r10e\platforms\android-21\arch-arm\usr\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\NVPACK\OpenCV-2.4.8.2-Tegra-sdk\sdk\native\jni\include&quot;"/>
 								</option>
-								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.cygwin.1620596814" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input.cygwin"/>
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.749144438" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
 						</toolChain>
 					</folderInfo>
@@ -39,6 +46,7 @@
 		</configuration>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.mingw.base.15659017;cdt.managedbuild.toolchain.gnu.mingw.base.15659017.1679454732;cdt.managedbuild.tool.gnu.c.compiler.mingw.base.743985333;cdt.managedbuild.tool.gnu.c.compiler.input.1125682388">
@@ -68,6 +76,9 @@
 		<scannerConfigBuildInfo instanceId="0.1615692213;0.1615692213.;cdt.managedbuild.tool.gnu.cpp.compiler.cygwin.665775363;cdt.managedbuild.tool.gnu.cpp.compiler.input.cygwin.1620596814">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCWinManagedMakePerProjectProfileCPP"/>
 		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="0.1615692213;0.1615692213.;cdt.managedbuild.tool.gnu.cpp.compiler.base.2012570349;cdt.managedbuild.tool.gnu.cpp.compiler.input.749144438">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
+		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="0.1615692213;0.1615692213.;com.android.gcc.compiler.892308693;com.android.gcc.inputType.1784124757">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.android.AndroidPerProjectProfile"/>
 		</scannerConfigBuildInfo>
@@ -79,6 +90,9 @@
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="com.android.toolchain.gcc.497381163;com.android.toolchain.gcc.497381163.261265377;cdt.managedbuild.tool.gnu.c.compiler.cygwin.base.1589707551;cdt.managedbuild.tool.gnu.c.compiler.input.cygwin.2086336245">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="0.1615692213;0.1615692213.;cdt.managedbuild.tool.gnu.cpp.compiler.base.425860249;cdt.managedbuild.tool.gnu.cpp.compiler.input.1856206181">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileCPP"/>
 		</scannerConfigBuildInfo>
 	</storageModule>
 </cproject>
