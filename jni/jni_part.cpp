@@ -18,6 +18,13 @@ using namespace cv;
 
 Mat * mCanny = NULL;
 
+//lamp localization
+vector<vector<double> > lampLocations {
+	{-24.5, 168, 0},
+	{2.5, 130, 0},
+	{36, 166, 0}
+};
+
 extern "C" {
 
 float pow2roundup (int x);
@@ -46,7 +53,7 @@ void processSegment(Mat segment, vector<int> &detectedBits);
 void fillHole(const Mat srcBw, Mat &dstBw);
 void getCorrectedPixelsOffset(Mat input, vector<int>& correctPixels );
 void decodeBits(vector<int>& inputPixels, vector<int> &detectedBits);
-
+void angleOfArrival(double loc[], vector< vector<int> > &returnMatrix);
 
 JNIEXPORT void JNICALL Java_com_example_testhiddenpreview_CamCallback_fftProcessing(JNIEnv* env, jobject thiz, jint width, jint height,jbyteArray NV21FrameData);
 
@@ -76,13 +83,16 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode(JN
 	vector<vector<int> > returnMatrix(5, vector<int>(3)); // contains center positions and radii of blobs
 	detector(gray_image_copy, returnMatrix);
 
+
+
 	// -- Segment image in N pieces and put each segment in segmentedImages--
 	vector<Mat> segmentedImages(returnMatrix.size());
 	segment(gray_image, segmentedImages, returnMatrix);
 
+
+
   // -- Process each segment and decode id --
   int codeLength = 3; // Length of id (see Arduino code)
-  int allCodes = 1*codeLength;
 
   if (returnMatrix.size() != 0){
 		vector<vector<int> > detectedBits(returnMatrix.size(), vector<int>(codeLength));
@@ -97,9 +107,14 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode(JN
 			}
 		}
 
+		 double location[2];
+		 angleOfArrival(location, returnMatrix);
+
+		 cout << "X = " << location[0] << ", Y = " << location[1] << endl;
+
 
 		//prepare result (TODO send all detected bits back or compute AoA here)
-		jint fill[allCodes];
+		jint fill[3*codeLength];
 
 
 		/*for(int i=0; i < codeLength; i++){
@@ -117,8 +132,8 @@ JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode(JN
 		}
 
 		jintArray result;
-		result = env->NewIntArray(allCodes);
-		env->SetIntArrayRegion(result, 0, allCodes, fill);
+		result = env->NewIntArray(3*codeLength);
+		env->SetIntArrayRegion(result, 0, 3*codeLength, fill);
 
 		env->ReleaseByteArrayElements(NV21FrameData, pNV21FrameData, JNI_ABORT);
 		return result;
@@ -867,6 +882,12 @@ void processSegment(Mat segment, vector<int> &detectedBits){
 	imshow("ad", adaptive0);
 	waitKey(0);*/
 
+	Mat element = getStructuringElement(MORPH_RECT, Size(5, 5));
+	Mat dilate_img;
+	Mat erode_img;
+	erode(adaptive, erode_img, element);
+	dilate(erode_img,dilate_img,element);
+
 	// Remove noise
 	//Mat filled_adaptive;
 	//fillHole(adaptive, filled_adaptive);
@@ -875,7 +896,7 @@ void processSegment(Mat segment, vector<int> &detectedBits){
 
 	// Get decode line
 	vector<int> correctedPixels;
-	getCorrectedPixelsOffset(adaptive, correctedPixels);
+	getCorrectedPixelsOffset(dilate_img, correctedPixels);
 	//imwrite("line.jpg", correctedPixels);
 
 	decodeBits(correctedPixels, detectedBits);
@@ -1016,6 +1037,40 @@ void decodeBits(vector<int>& inputPixels, vector<int> &detectedBits){
 
 			j++;
 		}
+}
+void angleOfArrival(double loc[], vector< vector<int> > &returnMatrix){
+	double Lx1 = lampLocations[0][0];
+	double Lx2 = lampLocations[1][0];
+	double Lx3 = lampLocations[2][0];
+	double Ly1 = lampLocations[0][1];
+	double Ly2 = lampLocations[1][1];
+	double Ly3 = lampLocations[2][1];
+
+	int a1 = returnMatrix[2][0]-960;
+	int a2 = returnMatrix[0][0]-960;
+	int a3 = returnMatrix[1][0]-960;
+	int b1 = 540-returnMatrix[2][1];
+	int b2 = 540-returnMatrix[0][1];
+	int b3 = 540-returnMatrix[1][1];
+
+
+	double k1 = (Lx1*b3-Lx3*b3-Ly1*a3+Ly3*a3)/(a1*b3-a3*b1);
+	double k2 = (Lx1*a3*b1+Lx2*a1*b3-Lx2*a3*b1-Lx3*a1*b3-Ly1*a1*a3+Ly3*a1*a3)/((a1*b3-a3*b1)*a2);
+	double k3 = (Lx1*b1-Lx3*b1-Ly1*a1+Ly3*a1)/(a1*b3-a3*b1);
+
+	double Xc1 = Lx1 - k1*a1;
+	double Xc2 = Lx2 - k2*a2;
+	double Xc3 = Lx3 - k3*a3;
+
+	double Yc1 = Ly1 - k1*b1;
+	double Yc2 = Ly2 - k2*b2;
+	double Yc3 = Ly3 - k3*b3;
+
+	double X_avg = (Xc1 + Xc2 + Xc3)/3;
+	double Y_avg = (Yc1 + Yc2 + Yc3)/3;
+
+	loc[0] = X_avg;
+	loc[1] = Y_avg;
 }
 
 
