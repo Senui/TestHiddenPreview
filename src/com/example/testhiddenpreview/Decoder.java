@@ -70,8 +70,8 @@ class Decoder implements Runnable {
 				}
 				*/
 				
-				 long stopTime = System.nanoTime();
-			     Log.e(TAG,"SerialTime Millis:"+(float)(stopTime - startTime)/1000000);
+				long stopTime = System.nanoTime();
+			    Log.e(TAG,"SerialTime Millis:"+(float)(stopTime - startTime)/1000000);
 				
 				if (result.length == 0) {
 					System.out.println("Empty");
@@ -143,7 +143,7 @@ class Decoder implements Runnable {
 						System.out.println(str);
 						handler.post(new Runnable(){
 							public void run() {
-								MainActivity.debugging.setText("ID: " + binaryString2 + " (= " + str + ")");
+								MainActivity.debugging.setText("ID: " + binaryString2);
 							}
 						});
 						/*

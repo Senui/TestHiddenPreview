@@ -16,12 +16,12 @@ import android.widget.FrameLayout;
 
 public class CamPreview extends TextureView implements SurfaceTextureListener {
 
-  private Camera mCamera;
+  public Camera mCamera;
   
   private static final String TAG = "CameraView";
   Context context;
 
-
+  Parameters parameters;
 
   public CamPreview(Context context, Camera camera) {
     super(context);
@@ -33,7 +33,7 @@ public class CamPreview extends TextureView implements SurfaceTextureListener {
   public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
     Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
     //setLayoutParams(new FrameLayout.LayoutParams(1920, 1080, Gravity.CENTER));
-    Parameters parameters;
+
 	
     parameters = mCamera.getParameters();
 	// Set the camera preview size

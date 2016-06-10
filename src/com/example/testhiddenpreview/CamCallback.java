@@ -33,15 +33,15 @@ public class CamCallback implements Camera.PreviewCallback{
         
     static long distance = -1;
     
-    static int centerColumn = 0;
+    static int centerColumn = 995;
     
-    static int centerRow = 0;
+    static int centerRow = 540;
     
     static int BlobRadius = 0;
     
     static int lightOn = 0;
     
-    static int bits = 8;
+    static int bits = 3;
     
     public static LinkedBlockingDeque<FrameData> frameQueue; 
 
@@ -253,12 +253,12 @@ public class CamCallback implements Camera.PreviewCallback{
 					frameNumber = 0;
 					
 					
-					try {
+					/*try {
 						stream.close();
 					} catch (IOException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
-					}
+					}*/
 					//MediaScannerConnection.scanFile(MainActivity.context, new String[] { MainActivity.delayFile.getAbsolutePath() }, null, null);
 					
 				}
@@ -294,7 +294,7 @@ public class CamCallback implements Camera.PreviewCallback{
 				
 		        
 		        try {
-					Thread.sleep(sleep);
+					Thread.sleep(1000);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
