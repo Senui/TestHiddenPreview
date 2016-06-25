@@ -8,15 +8,28 @@
 #include <fstream>
 #include <android/log.h>
 #include <time.h>
+#include <string>
+#include <sstream>
 
 #define  LOG_TAG    "JNI_PART"
-
+#define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 #define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 using namespace std;
 using namespace cv;
 
+namespace patch
+{
+    template < typename T > std::string to_string( const T& n )
+    {
+        std::ostringstream stm ;
+        stm << n ;
+        return stm.str() ;
+    }
+}
+
 Mat * mCanny = NULL;
+Mat circleMask;
 
 vector<vector<double> > lampLocations {
 		{-24.5, 168, 0},
@@ -52,6 +65,8 @@ void processSegment(Mat segment, vector<int> &detectedBits);
 void fillHole(const Mat srcBw, Mat &dstBw);
 void getCorrectedPixelsOffset(Mat input, vector<int>& correctPixels );
 void decodeBits(vector<int>& inputPixels, vector<int> &detectedBits);
+int Link(string id_string, vector<vector<double> > &link_loc);
+string IntToString(int & i);
 void angleOfArrival(double loc[], vector< vector<int> > &returnMatrix);
 
 
@@ -60,7 +75,6 @@ JNIEXPORT void JNICALL Java_com_example_testhiddenpreview_CamCallback_fftProcess
 JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_CamCallback_ImageProcessing(JNIEnv* env, jobject thiz, jint width, jint height,jbyteArray NV21FrameData);
 
 JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_CamCallback_ImageProcessing2(JNIEnv* env, jobject thiz, jint width, jint height,jbyteArray NV21FrameData);
-
 
 JNIEXPORT jintArray JNICALL Java_com_example_testhiddenpreview_DistanceCalculator_blobDetector(JNIEnv* env, jobject thiz, jint width, jint height,jbyteArray NV21FrameData);
 
@@ -73,7 +87,9 @@ JNIEXPORT jdoubleArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode
 	jbyte * pNV21FrameData = env->GetByteArrayElements(NV21FrameData, 0);
 
 	// get image
-	Mat gray_image(height, width, CV_8UC1, (unsigned char *) pNV21FrameData);
+	//Mat gray_image(height, width, CV_8UC1, (unsigned char *) pNV21FrameData);
+	string file = "/storage/emulated/0/";
+	Mat gray_image = imread(file + "greyImage_input.jpg", CV_LOAD_IMAGE_GRAYSCALE);
 	Mat gray_image_copy = gray_image.clone();
 
 	clock_t begin, end;
@@ -103,25 +119,10 @@ JNIEXPORT jdoubleArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode
 			}
 		}
 
-		double location[3];
-		int dimensions = sizeof(location)/sizeof(*location);
-		angleOfArrival(location, returnMatrix); // TODO: use least squares method for localization
-
-
-		//////////////////////////
-		// SEND BACK DETECTED BITS (START)
-		//////////////////////////
-
-/*		//prepare result (TODO: send all detected bits back or compute AoA here)
-		jint fill[allCodes];
-
-		for(int i=0; i < codeLength; i++){
-			fill[i] = detectedBits[0][i];
-		}
-
-	int p = 0;
+		int fill[9];
+		int arrayLength=sizeof(fill)/sizeof(fill[0]);
+		int p = 0;
 		for (unsigned int j = 0; j < detectedBits.size(); j++){
-			cout << "Lamp " << j << ": ";
 			for (int k = 0; k < codeLength; k++)
 			{
 				fill[p] = detectedBits[j][k];
@@ -129,28 +130,38 @@ JNIEXPORT jdoubleArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode
 			}
 		}
 
-		jintArray result;
-		result = env->NewIntArray(allCodes);
-		env->SetIntArrayRegion(result, 0, allCodes, fill);
+		string id_string;
+    for(int i=0;i<arrayLength;i++)
+    {
+        int temp=fill[i];
+        char a[1];
+        sprintf(a,"%d",temp);
+        id_string+=a;
+    }
 
-		env->ReleaseByteArrayElements(NV21FrameData, pNV21FrameData, JNI_ABORT);
-		return result;*/
+    LOGD(id_string);
 
-		//////////////////////////
-		// SEND BACK DETECTED BITS (END)
-		//////////////////////////
+		vector<vector<double> > link_loc(3, vector<double>(2));
+		int successLink = Link(id_string, link_loc);
 
-		jdouble fillCoordinates[dimensions];
-		for(int i = 0; i < dimensions; i++){
-			fillCoordinates[i] = location[i];
-		}
 
-		jdoubleArray coordinates;
-		coordinates = env->NewDoubleArray(dimensions);
-		env->SetDoubleArrayRegion(coordinates, 0, dimensions, fillCoordinates);
+			double location[3];
+			int dimensions = sizeof(location)/sizeof(*location);
 
-		env->ReleaseByteArrayElements(NV21FrameData, pNV21FrameData, JNI_ABORT);
-		return coordinates;
+			angleOfArrival(location, returnMatrix); // TODO: use least squares method for localization
+
+			jdouble fillCoordinates[dimensions];
+			for(int i = 0; i < dimensions; i++){
+				fillCoordinates[i] = location[i];
+			}
+
+			jdoubleArray coordinates;
+			coordinates = env->NewDoubleArray(dimensions);
+			env->SetDoubleArrayRegion(coordinates, 0, dimensions, fillCoordinates);
+
+			env->ReleaseByteArrayElements(NV21FrameData, pNV21FrameData, JNI_ABORT);
+			return coordinates;
+
   }
   else{
   	jdouble fill[1] = {0};
@@ -685,7 +696,7 @@ double averagePixelsForLightCheck (Mat input){
 
 	double average = sum / input.rows;
 
-	LOGE("Average %d \n", average);
+	//LOGE("Average %d \n", average);
 
 
 	return average;
@@ -847,64 +858,112 @@ void detector(Mat input, vector< vector<int> > &returnMatrix){
 	imwrite(file + "greyImage.jpg", input);
 }
 
-void segment(Mat fullImage, vector<Mat> &segmentedImages, vector< vector<int> > &returnMatrix ){
+void segment(Mat fullImage, vector<Mat> &segmentedImages, vector< vector<int> > &returnMatrix){
 
-	int p1, p2;
-		for (int i = 0; i < segmentedImages.size(); i++){
-			int radius = returnMatrix[i][2];
-			if (returnMatrix[i][0] - ceil(1.25*radius) >= 0) //check if it falls outside border
-				p1 = returnMatrix[i][0] - ceil(1.25*radius); // x-coordinate of top left point
-			else
-				p1 = 0;
-
-			if ( returnMatrix[i][1] - ceil(1.25*radius) >= 0) //check if it falls outside border
-				p2 = returnMatrix[i][1] - ceil(1.25*radius); // y-coordinate of top left point
-			else
-				p2 = 0;
-
-		if (returnMatrix[i][0] + ceil(1.25*radius) <= fullImage.cols && returnMatrix[i][1] + ceil(1.25*radius) <= fullImage.rows){
-			Rect rect(p1, p2, ceil(2.5*radius), ceil(2.5*radius));
-			fullImage(rect).copyTo(segmentedImages[i]);
-			string file = "/storage/emulated/0/";
-			imwrite(file + "segImages.jpg", segmentedImages[i]);
+	int cols_top, cols_bottom, rows_left, rows_right, col_length, row_length;
+	for (unsigned int i = 0; i < segmentedImages.size(); i++){
+		int radius = returnMatrix[i][2];
+		// x-coordinate of top point
+		if(returnMatrix[i][0] - ceil(1.25*radius) >= 0){
+			cols_top = returnMatrix[i][0] - ceil(1.25*radius);
 		}
-		else //if image falls outside border, make empty matrix (TODO: make better solution)
-			segmentedImages[i] = Mat::zeros(1, 1, CV_8U);
+		else{
+			cols_top = 0;
+		}
+		// x-coordinate of bottom point
+		if(returnMatrix[i][0] + ceil(1.25*radius) <= fullImage.cols){
+			cols_bottom = returnMatrix[i][0] + ceil(1.25*radius);
+		}
+		else{
+			cols_bottom = 1080;
+		}
+		// y-coordinate of left point
+		if(returnMatrix[i][1] - ceil(1.25*radius) >= 0){
+			rows_left = returnMatrix[i][1] - ceil(1.25*radius);
+		}
+		else{
+			rows_left = 0;
+		}
+		// y-coordinate of right point
+		if(returnMatrix[i][1] + ceil(1.25*radius) <= fullImage.rows ){
+			rows_right = returnMatrix[i][1] + ceil(1.25*radius);
+		}
+		else{
+			rows_right = 1920;
+		}
+		col_length = cols_bottom - cols_top;
+		row_length = rows_right - rows_left;
+		Rect rect(cols_top, rows_left, col_length, row_length);
+		fullImage(rect).copyTo(segmentedImages[i]);
+
+
+		int top, bottom, left, right;
+		Mat dst;
+		dst = segmentedImages[i];
+		top = (int) cols_top - (returnMatrix[i][0] - ceil(1.25*radius));
+		bottom = (int) returnMatrix[i][0] + ceil(1.25*radius) - cols_bottom;
+		left = (int) rows_left - (returnMatrix[i][1] - ceil(1.25*radius));
+		right = (int) returnMatrix[i][1] + ceil(1.25*radius) - rows_right;
+
+		copyMakeBorder(dst, segmentedImages[i],top, bottom, left, right,BORDER_CONSTANT,0);
 	}
 }
 
 void processSegment(Mat segment, vector<int> &detectedBits){
 
-	// Enhance image contrast
-	Mat adaptive_equalized;
-	Ptr<CLAHE> clahe = createCLAHE();
-	clahe->setClipLimit(10);
-	clahe->setTilesGridSize(Size(8,8));
-	clahe->apply(segment, adaptive_equalized);
+	  Mat blurMask;
+	  blur(segment, blurMask, Size(50, 50));
 
-	// Blur image
-	Mat blurred_segment;
-	blur(adaptive_equalized, blurred_segment, Size(3, 3));
+	  Mat otsu;
+	  threshold(blurMask, otsu, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+
+		vector<vector<Point> > contours;
+		vector<Point2i> center;
+		vector<int> radius;
+
+		findContours(otsu.clone(), contours, CV_RETR_TREE, CV_CHAIN_APPROX_NONE);
+
+		Point2f c;
+		float r;
+		minEnclosingCircle( contours[0], c, r);
+
+		if (r >= 50)
+		{
+				center.push_back(c);
+				radius.push_back(r);
+		}
+
+		circleMask = Mat::zeros(segment.rows, segment.cols, CV_8UC1);
+		circle(circleMask, center[0], 0.95*radius[0], Scalar(255,255,255), CV_FILLED, 3);
+		Mat invertMask; bitwise_not(circleMask, invertMask);
+		imwrite( "invertMask.jpg", invertMask);
+		imwrite(" circleSegment.jpg", segment);
+
+		// Enhance image contrast
+		Mat adaptive_equalized;
+		Ptr<CLAHE> clahe = createCLAHE();
+		clahe->setClipLimit(10);
+		clahe->setTilesGridSize(Size(9,9));
+		clahe->apply(segment, adaptive_equalized);
+
+		// Blur image
+		Mat blurred_segment;
+		blur(adaptive_equalized, blurred_segment, Size(1, 1));
+		blurred_segment = blurred_segment-invertMask;
 
 	//OTSU image (converts gray to binary)
 	Mat adaptive, adaptive0;
-	//adaptiveThreshold(blurred_segment, adaptive0, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 105, 2);
 	threshold(blurred_segment, adaptive, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
-	/*imshow("ad", adaptive);
-	waitKey(0);
-	imshow("ad", adaptive0);
-	waitKey(0);*/
 
-	// Remove noise
-	//Mat filled_adaptive;
-	//fillHole(adaptive, filled_adaptive);
-	//imshow("ad", filled_adaptive);
-	//waitKey(0);
+	Mat element = getStructuringElement(MORPH_RECT, Size(5, 5));
+	Mat dilate_img;
+	Mat erode_img;
+	erode(adaptive, erode_img, element);
+	dilate(erode_img,dilate_img,element);
 
 	// Get decode line
 	vector<int> correctedPixels;
-	getCorrectedPixelsOffset(adaptive, correctedPixels);
-	//imwrite("line.jpg", correctedPixels);
+	getCorrectedPixelsOffset(dilate_img, correctedPixels);
 
 	decodeBits(correctedPixels, detectedBits);
 }
@@ -934,116 +993,185 @@ void getCorrectedPixelsOffset(Mat input, vector<int>& correctPixels ){
 }
 
 void decodeBits(vector<int>& inputPixels, vector<int> &detectedBits){
-	  //find peaks and falls
-		std::vector<int> peaks;
-		std::vector<int> falls;
+	//find peaks and falls
+	std::vector<int> peaks;
+	std::vector<int> falls;
 
-		int freq = 2500; // fill in preamble freq from arduino code
-		int factor = ceil(24000/freq);
+	int freq = 3000; // fill in preamble freq from arduino code
+	int factor = ceil(24000/freq);
+	cout << "factor" << factor << "\n";
 
-		int dif;
+	int dif;
 
-		for (unsigned int i = 0; i < inputPixels.size() - 1; i++){
+	for (unsigned int i = 0; i < inputPixels.size() - 1; i++){
 
-			if(inputPixels[i] == 0 && inputPixels[i+1] == 255){
-				peaks.push_back(i);
-				//printf("Peak On: %d \n", i);
-			}
-
-			else if(inputPixels[i] == 255 && inputPixels[i+1] == 0 && peaks.size() !=0){
-				falls.push_back(i);
-				//printf("Fall On: %d \n", i);
-			}
+		if(inputPixels[i] == 0 && inputPixels[i+1] == 255){
+			peaks.push_back(i);
+			//printf("Peak On: %d \n", i);
 		}
 
-		if(peaks.size() > falls.size())
-			peaks.erase(peaks.begin() + peaks.size() - 1);
-
-		int j = 1;
-		int firstPreamble=0;
-		int secondPreamble=0;
-		// preamble looks like: 01110
-
-		for (unsigned int i = 0; i < peaks.size(); i++){
-
-			dif = falls[i] - peaks[i];
-			//cout << dif << ' ';
-
-			if ( dif >= 2.5 *factor ){ // look for the big white bars (the 111s in 01110s)
-				if( j == 1 ){
-					//if(i == 0)
-						//continue;
-					firstPreamble = i; // set the first big white bar to firstPreamble
-					j++;
-				}
-				else{
-					secondPreamble = i; // set the second big white bar to firstPreamble
-					break;
-				}
-			}
+		else if(inputPixels[i] == 255 && inputPixels[i+1] == 0 && peaks.size() !=0){
+			falls.push_back(i);
+			//printf("Fall On: %d \n", i);
 		}
+	}
 
-		if(secondPreamble == 0)
-			return;
+	if(peaks.size() > falls.size())
+		peaks.erase(peaks.begin() + peaks.size() - 1);
 
-		cout << "first " << firstPreamble << " second " << secondPreamble<< "\n" ;
-
-
-		j = 1;
-		int addZero = 0;
-
-
-		while(true){
-
-			// the black bars that are between the first and second preamble
-			dif = peaks[firstPreamble + j] - falls[firstPreamble + j -1];
-
-			cout << dif << ' ';
-
-			if (dif >= 1.1*factor) {
-				if (dif > 2.0 * factor){ // if we get 00 after the last preamble 0
-					detectedBits.push_back(0);
-					detectedBits.push_back(0);
-				}
-				else{ // if we get only 0 after the last preamble 0
-					detectedBits.push_back(0);
-				}
-			}
-
-			else {
-				if((j != 1 && firstPreamble + j != secondPreamble) || addZero == 1){
-					//cout << "0" << "\n";
-					detectedBits.push_back(0);
-				}
-			}
+	int j = 1;
+	int firstPreamble=0;
+	int secondPreamble=0;
+	// preamble looks like: 01110
 
 
-			if (firstPreamble + j == secondPreamble){
-			  for (unsigned int i = 0; i < detectedBits.size(); i++)
-				  cout << detectedBits[i] << ' ';
-				break;
-			}
+	/*//check preamble size
+	preambleSize = 0;
+	for (unsigned int i = 0; i < peaks.size(); i++){
+		dif = falls[i] - peaks[i];
+		if (preambleSize < dif){
+			preambleSize = dif;
+		}
+	}
+	if(preambleSize > 25){
+		preambleSize = 26;
+	}
+	else{
+		preambleSize = 20;
+	}*/
 
-			// the white bars that are between the first and second preamble
-			dif = falls[firstPreamble +j] - peaks[firstPreamble + j];
+	for (unsigned int i = 0; i < peaks.size(); i++){
 
-			cout << dif << ' ';
+		dif = falls[i] - peaks[i];
+		cout << dif << " falls" << falls[i] << "peaks" << peaks[i]<<"\n";
 
-			if(dif > 1.5 * factor ){
-				detectedBits.push_back(1);
-				detectedBits.push_back(1);
-				if(firstPreamble + j +1 == secondPreamble)
-					addZero = 1;
-				//cout << "1" << "\n";
-				//cout << "/1" << "\n";
+		if ( dif >= 2.5*factor ){ // look for the big white bars (the 111s in 01110s)
+			if( j == 1 ){
+				//if(i == 0)
+					//continue;
+				firstPreamble = i; // set the first big white bar to firstPreamble
+//				preambleSize1 = dif;
+				j++;
 			}
 			else{
-				//cout << "1" << "\n";
-				detectedBits.push_back(1);
-			}
+				secondPreamble = i; // set the second big white bar to firstPreamble
+/*
+				preambleSize2 = dif;
+				if (preambleSize2 > 25 && preambleSize1 <= 25){
+					firstPreamble++;
+					secondPreamble++;
+				}
+*/
 
-			j++;
+				break;
+			}
 		}
+	}
+
+	if(secondPreamble == 0){
+		cout << "\n";
+		return;
+	}
+
+	cout << "first " << firstPreamble << " second " << secondPreamble<< "\n" ;
+
+
+	j = 1;
+//	int addZero = 0;
+
+	int check_point, check_id;
+	//int distance_preamble;
+	//distance_preamble = peaks[secondPreamble] - falls[firstPreamble];
+	//set the start point
+	check_point = falls[firstPreamble] + 1;
+	cout << "initial check_point"<< check_point << "\n";
+	//cout << "distance between two preambles "<< distance_preamble << "\n";
+	while(true){
+
+		// the black bars that are between the first and second preamble
+		//dif = peaks[firstPreamble + j] - falls[firstPreamble + j -1];
+
+		// cout << dif << ' ';
+
+		check_point = check_point + 8;
+		if (check_point < peaks[secondPreamble] - 4){
+			if (j%2 == 1)
+			{
+				check_id = (j+1)/2 ;
+				if (check_point <= peaks[firstPreamble + check_id]){
+					cout<< "error10: " << j <<", " <<peaks[firstPreamble + j] << "\n";
+					detectedBits.push_back(0);}
+				else{
+					detectedBits.push_back(1);
+					cout<< "error11: " << j <<", " <<peaks[firstPreamble + j] << "\n";
+					j++;
+				}
+			}
+			else{
+				check_id = j/2 ;
+				if (check_point <= falls[firstPreamble + check_id]){
+					detectedBits.push_back(1);
+					cout<< "error21: " << j <<", " <<falls[firstPreamble + j] << "\n";
+				}
+				else{
+					detectedBits.push_back(0);
+					cout<< "error20: " << j <<", " <<falls[firstPreamble + j] << "\n";
+					j++;
+				}
+
+			}
+		}
+		else{
+			break;
+		}
+	}
+}
+
+int Link(string id_string, vector<vector<double> > &link_loc){
+	int num = 0,num_1 = 0, num_2 = 0, num_3 = 0;
+	for(int i=0;i<3;i++){
+		int j = i*3;
+		string s = id_string.substr(j,3);
+
+		int id = atof(s.c_str());
+
+		switch (id){
+		case 1  :
+			link_loc[i][0] = lampLocations[0][0];
+			link_loc[i][1] = lampLocations[0][1];
+			link_loc[i][2] = lampLocations[0][2];
+			num_1 = 1;
+			break;
+		case 11 :
+			link_loc[i][0] = lampLocations[1][0];
+			link_loc[i][1] = lampLocations[1][1];
+			link_loc[i][2] = lampLocations[1][2];
+			num_2 = 1;
+			break;
+		case 100 :
+			link_loc[i][0] = lampLocations[2][0];
+			link_loc[i][1] = lampLocations[2][1];
+			link_loc[i][2] = lampLocations[2][2];
+			num_3 = 1;
+			break;
+		default:
+			return 0;
+		}
+	}
+
+	num = num_1 + num_2 + num_3;
+	if (num >= 3)
+		return 1;
+	else
+		return 0;
+}
+
+string IntToString(int & i)
+{
+  string s;
+  stringstream ss(s);
+  ss<<i;
+  return ss.str();
 }
 
 void angleOfArrival(double loc[], vector< vector<int> > &returnMatrix){
@@ -1066,15 +1194,6 @@ void angleOfArrival(double loc[], vector< vector<int> > &returnMatrix){
 	int b2 = 540-returnMatrix[0][1];
 	int b3 = 540-returnMatrix[1][1];
 
-	/*cout << "a1 = " << a1 << endl;
-	cout << "a2 = " << a2 << endl;
-	cout << "a3 = " << a3 << endl;
-	cout << "b1 = " << b1 << endl;
-	cout << "b2 = " << b2 << endl;
-	cout << "b3 = " << b3 << endl;*/
-
-	//cout << "Lx2 = "<< a1 << endl;
-
 	double k1 = (Lx1*b3-Lx3*b3-Ly1*a3+Ly3*a3)/(a1*b3-a3*b1);
 	double k2 = (Lx1*a3*b1+Lx2*a1*b3-Lx2*a3*b1-Lx3*a1*b3-Ly1*a1*a3+Ly3*a1*a3)/((a1*b3-a3*b1)*a2);
 	double k3 = (Lx1*b1-Lx3*b1-Ly1*a1+Ly3*a1)/(a1*b3-a3*b1);
@@ -1088,7 +1207,7 @@ void angleOfArrival(double loc[], vector< vector<int> > &returnMatrix){
 	double Yc3 = Ly3 - k3*b3;
 
 	//double Zf = (Lz1 - Lz3) / (k1 - k3);
-	double Zf = 1604;
+	double Zf = 1700;
 
 	double Zc1 = Lz1 + k1*Zf;
 	double Zc2 = Lz2 + k2*Zf;
