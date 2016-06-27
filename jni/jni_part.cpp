@@ -10,6 +10,7 @@
 #include <time.h>
 #include <string>
 #include <sstream>
+#include <typeinfo>
 
 #define  LOG_TAG    "JNI_PART"
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
@@ -65,7 +66,7 @@ void processSegment(Mat segment, vector<int> &detectedBits);
 void fillHole(const Mat srcBw, Mat &dstBw);
 void getCorrectedPixelsOffset(Mat input, vector<int>& correctPixels );
 void decodeBits(vector<int>& inputPixels, vector<int> &detectedBits);
-int Link(string id_string, vector<vector<double> > &link_loc);
+int Link(vector<int> &v, vector<vector<double> > &link_loc);
 string IntToString(int & i);
 void angleOfArrival(double loc[], vector< vector<int> > &returnMatrix);
 
@@ -120,7 +121,7 @@ JNIEXPORT jdoubleArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode
 		}
 
 		int fill[9];
-		int arrayLength=sizeof(fill)/sizeof(fill[0]);
+		int arrayLength = sizeof(fill)/sizeof(fill[0]);
 		int p = 0;
 		for (unsigned int j = 0; j < detectedBits.size(); j++){
 			for (int k = 0; k < codeLength; k++)
@@ -130,19 +131,18 @@ JNIEXPORT jdoubleArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode
 			}
 		}
 
-		string id_string;
-    for(int i=0;i<arrayLength;i++)
-    {
-        int temp=fill[i];
-        char a[1];
-        sprintf(a,"%d",temp);
-        id_string+=a;
-    }
+		vector<int> fillArray (fill, fill + sizeof(fill)/sizeof(fill[0]));
 
-    LOGD(id_string);
+/*		ostringstream oss;
+		string id_string = "";
+    for(int i = 0; i < arrayLength; i++)
+    {
+    	//oss << fill[i];
+    	id_string += oss.str();
+    }*/
 
 		vector<vector<double> > link_loc(3, vector<double>(2));
-		int successLink = Link(id_string, link_loc);
+		//int successLink = Link(fillArray, link_loc);
 
 
 			double location[3];
@@ -150,19 +150,26 @@ JNIEXPORT jdoubleArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode
 
 			angleOfArrival(location, returnMatrix); // TODO: use least squares method for localization
 
+			ostringstream oss;
+			string debugString;
 			jdouble fillCoordinates[dimensions];
 			for(int i = 0; i < dimensions; i++){
 				fillCoordinates[i] = location[i];
+				oss << fillCoordinates[i];
 			}
+
+			debugString = oss.str();
 
 			jdoubleArray coordinates;
 			coordinates = env->NewDoubleArray(dimensions);
 			env->SetDoubleArrayRegion(coordinates, 0, dimensions, fillCoordinates);
 
 			env->ReleaseByteArrayElements(NV21FrameData, pNV21FrameData, JNI_ABORT);
+			LOGD("debugString = %s", debugString.c_str());
 			return coordinates;
 
   }
+
   else{
   	jdouble fill[1] = {0};
   	jdoubleArray result;
@@ -1127,54 +1134,53 @@ void decodeBits(vector<int>& inputPixels, vector<int> &detectedBits){
 	}
 }
 
-int Link(string id_string, vector<vector<double> > &link_loc){
-	int num = 0,num_1 = 0, num_2 = 0, num_3 = 0;
-	for(int i=0;i<3;i++){
-		int j = i*3;
-		string s = id_string.substr(j,3);
+int Link(vector<int> &v, vector<vector<double> > &link_loc){
+	int num = 0, num_1 = 0, num_2 = 0, num_3 = 0;
+	vector< vector<int> > correctIds = {{0,0,1},{1,0,0},{0,1,1}};
 
-		int id = atof(s.c_str());
+	for(int i = 0; i < 3; i++){
 
-		switch (id){
-		case 1  :
+		vector<int> id (v.begin() + 3*i, v.begin() + 3*i + 3);
+		for (std::vector<int>::const_iterator j = id.begin(); j != id.end(); ++j)
+		    std::cout << *j << ' ';
+		if (id == correctIds[0]){
 			link_loc[i][0] = lampLocations[0][0];
 			link_loc[i][1] = lampLocations[0][1];
 			link_loc[i][2] = lampLocations[0][2];
 			num_1 = 1;
-			break;
-		case 11 :
+		}
+		else if (id == correctIds[2]){
 			link_loc[i][0] = lampLocations[1][0];
 			link_loc[i][1] = lampLocations[1][1];
 			link_loc[i][2] = lampLocations[1][2];
 			num_2 = 1;
-			break;
-		case 100 :
+		}
+		else if (id == correctIds[1]){
 			link_loc[i][0] = lampLocations[2][0];
 			link_loc[i][1] = lampLocations[2][1];
 			link_loc[i][2] = lampLocations[2][2];
 			num_3 = 1;
-			break;
-		default:
-			return 0;
 		}
+		else
+			return 0;
 	}
 
 	num = num_1 + num_2 + num_3;
-	if (num >= 3)
+	if (num == 3)
 		return 1;
 	else
 		return 0;
 }
 
-string IntToString(int & i)
+string IntToString(int &i)
 {
   string s;
   stringstream ss(s);
-  ss<<i;
+  ss << i;
   return ss.str();
 }
 
-void angleOfArrival(double loc[], vector< vector<int> > &returnMatrix){
+void angleOfArrival(double* loc, vector< vector<int> > &returnMatrix){
 	double Lx1 = lampLocations[0][0];
 	double Lx2 = lampLocations[1][0];
 	double Lx3 = lampLocations[2][0];

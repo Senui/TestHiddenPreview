@@ -92,10 +92,9 @@ class Decoder implements Runnable {
 				StringBuilder bitstring = new StringBuilder();
 				for (int i = 0; i < result.length; i++) {
 					System.out.print(String.format(Locale.US, "---%.2f---", result[i]));
-					bitstring.append(String.format(Locale.US, "%.2f, ", result[i]));
+					bitstring.append(String.format(Locale.US, " %.2f,", result[i]));
 				}
 				
-				bitstring.append("Z");
 				binaryString = bitstring.toString();
 				
 				System.out.print("\n");

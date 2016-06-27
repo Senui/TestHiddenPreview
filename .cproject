@@ -23,7 +23,7 @@
 								</inputType>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.base.2012570349" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base">
-								<option id="gnu.cpp.compiler.option.include.paths.1564983000" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
+								<option id="gnu.cpp.compiler.option.include.paths.1564983000" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;E:\NVPACK\android-ndk-r10e\platforms\android-21\arch-arm\usr\include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;E:\NVPACK\OpenCV-2.4.8.2-Tegra-sdk\sdk\native\jni\include&quot;"/>
 								</option>
