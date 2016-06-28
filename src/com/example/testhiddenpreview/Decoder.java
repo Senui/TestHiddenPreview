@@ -1,6 +1,7 @@
 package com.example.testhiddenpreview;
 
 import java.util.Locale;
+import java.lang.Math;
 
 import android.os.Handler;
 import android.util.Log;
@@ -77,8 +78,8 @@ class Decoder implements Runnable {
 								
 				StringBuilder bitstring = new StringBuilder();
 				for (int i = 0; i < result.length; i++) {
-					System.out.print(String.format(Locale.US, "---%.2f---", result[i]));
-					bitstring.append(String.format(Locale.US, " %.2f,", result[i]));
+					System.out.print(String.format(Locale.US, "---%.2f---", Math.abs(result[i])));
+					bitstring.append(String.format(Locale.US, " %.2f,", Math.abs(result[i])));
 				}
 				
 				binaryString = bitstring.toString();

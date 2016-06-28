@@ -86,6 +86,7 @@ import android.widget.ToggleButton;
 	
     static Context context;
     
+    public static TextView xPos, yPos, zPos;
     public static TextView debugging;
     public static TextView message;
     
@@ -146,21 +147,17 @@ import android.widget.ToggleButton;
     preview.addView(lockCameraParams, lp);
     
     
-    //create TextViews
+    //create TextView
     
     debugging = new TextView(this);
     lp = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-    
     lp.addRule(RelativeLayout.ABOVE, 3);
-    
-    debugging.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
-    
+    debugging.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);   
     preview.addView(debugging, lp);
     
     
     message = new TextView(this);
-    lp = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-    
+    lp = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);  
     lp.addRule(RelativeLayout.BELOW, 2);
     
     message.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);

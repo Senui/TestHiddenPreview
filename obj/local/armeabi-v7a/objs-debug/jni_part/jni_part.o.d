@@ -1,4 +1,5 @@
 obj/local/armeabi-v7a/objs-debug/jni_part/jni_part.o: jni/jni_part.cpp \
+ jni/jni_part.h \
  E:/NVPACK/android-ndk-r10e/platforms/android-8/arch-arm/usr/include/jni.h \
  E:/NVPACK/android-ndk-r10e/platforms/android-8/arch-arm/usr/include/sys/cdefs.h \
  E:/NVPACK/android-ndk-r10e/platforms/android-8/arch-arm/usr/include/sys/cdefs_elf.h \
@@ -68,6 +69,8 @@ obj/local/armeabi-v7a/objs-debug/jni_part/jni_part.o: jni/jni_part.cpp \
  E:/NVPACK/android-ndk-r10e/sources/cxx-stl/gnu-libstdc++/4.8/include/set \
  E:/NVPACK/android-ndk-r10e/sources/cxx-stl/gnu-libstdc++/4.8/include/fstream \
  E:/NVPACK/android-ndk-r10e/platforms/android-8/arch-arm/usr/include/android/log.h
+
+jni/jni_part.h:
 
 E:/NVPACK/android-ndk-r10e/platforms/android-8/arch-arm/usr/include/jni.h:
 

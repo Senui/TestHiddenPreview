@@ -7,18 +7,7 @@
     @version 28/06/2016
 */
 
-#include <jni.h>
-#include <opencv2/opencv.hpp>
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include <iostream>
-#include <stdio.h>
-#include <fstream>
-#include <android/log.h>
-#include <time.h>
-#include <string>
-#include <sstream>
+#include "jni_part.h"
 
 #define  LOG_TAG    "JNI_PART"
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
@@ -37,19 +26,10 @@ vector<vector<double> > lampLocations {
 // Length of id (see Arduino code)
 int codeLength = 3;
 
+// The preamble frequency (see Arduino code)
+int freq = 3000;
+
 extern "C" {
-
-	// Function declarations
-	Mat clahe(Mat gray_image);
-	Mat blur(Mat input);
-
-	void detector(Mat input, vector< vector<int> > &returnMatrix);
-	void segment(Mat fullImage, vector<Mat> &segmentedImages, vector< vector<int> > &returnMatrix );
-	void processSegment(Mat segment, vector<int> &detectedBits);
-	void getCorrectedPixelsOffset(Mat input, vector<int>& correctPixels );
-	void decodeBits(vector<int>& inputPixels, vector<int> &detectedBits);
-	int Link(vector<int> &v, vector<vector<double> > &link_loc);
-	void angleOfArrival(double* loc, vector<vector<int> > &returnMatrix, vector<vector<double> > link_loc);
 
 	JNIEXPORT jdoubleArray JNICALL Java_com_example_testhiddenpreview_Decoder_decode(JNIEnv* env, jobject thiz, jint width, jint height,jbyteArray NV21FrameData, jint centerRow, jint centerColumn, jint blobRadius );
 
@@ -58,9 +38,9 @@ extern "C" {
 		jbyte * pNV21FrameData = env->GetByteArrayElements(NV21FrameData, 0);
 
 		// -- Create Mat file of the captured image data
-		string file = "/storage/emulated/0/";
-		Mat gray_image = imread(file + "greyImage_input.jpg", CV_LOAD_IMAGE_GRAYSCALE);
-		//Mat gray_image(height, width, CV_8UC1, (unsigned char *) pNV21FrameData);
+		//string file = "/storage/emulated/0/";
+		//Mat gray_image = imread(file + "greyImage_input.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+		Mat gray_image(height, width, CV_8UC1, (unsigned char *) pNV21FrameData);
 		Mat gray_image_copy = gray_image.clone();
 
 		// -- Make an empty array for failed cases
@@ -112,7 +92,7 @@ extern "C" {
 			vector<int> fillArray (fill, fill + sizeof(fill)/sizeof(fill[0]));
 
 			vector<vector<double> > link_loc(lampLocations.size(), vector<double>(lampLocations[0].size()));
-			int successLink = Link(fillArray, link_loc);
+			int successLink = link(fillArray, link_loc);
 			LOGD("{1} link_loc[0][0] = %.1f", link_loc[0][0]);
 
 			if (successLink == 1){
@@ -233,7 +213,7 @@ void segment(Mat fullImage, vector<Mat> &segmentedImages, vector< vector<int> > 
 			cols_bottom = returnMatrix[i][0] + ceil(1.25*radius);
 		}
 		else{
-			cols_bottom = 1080;
+			cols_bottom = fullImage.cols;
 		}
 		// y-coordinate of left point
 		if(returnMatrix[i][1] - ceil(1.25*radius) >= 0){
@@ -247,7 +227,7 @@ void segment(Mat fullImage, vector<Mat> &segmentedImages, vector< vector<int> > 
 			rows_right = returnMatrix[i][1] + ceil(1.25*radius);
 		}
 		else{
-			rows_right = 1920;
+			rows_right = fullImage.rows;
 		}
 		col_length = cols_bottom - cols_top;
 		row_length = rows_right - rows_left;
@@ -263,7 +243,7 @@ void segment(Mat fullImage, vector<Mat> &segmentedImages, vector< vector<int> > 
 		left = (int) rows_left - (returnMatrix[i][1] - ceil(1.25*radius));
 		right = (int) returnMatrix[i][1] + ceil(1.25*radius) - rows_right;
 
-		copyMakeBorder(dst, segmentedImages[i],top, bottom, left, right,BORDER_CONSTANT,0);
+		copyMakeBorder(dst, segmentedImages[i],top, bottom, left, right, BORDER_CONSTANT,0);
 	}
 }
 
@@ -340,8 +320,6 @@ void decodeBits(vector<int>& inputPixels, vector<int> &detectedBits){
 	//find peaks and falls
 	std::vector<int> peaks;
 	std::vector<int> falls;
-
-	int freq = 3000; // fill in preamble freq from arduino code
 	int factor = ceil(24000/freq);
 	cout << "factor" << factor << "\n";
 
@@ -444,13 +422,13 @@ void decodeBits(vector<int>& inputPixels, vector<int> &detectedBits){
 	}
 }
 
-int Link(vector<int> &v, vector<vector<double> > &link_loc){
+int link(vector<int> &ids, vector<vector<double> > &link_loc){
 	int num = 0, num_1 = 0, num_2 = 0, num_3 = 0;
 	vector< vector<int> > correctIds = {{0,0,1},{1,0,0},{0,1,1}};
 
 	for(int i = 0; i < 3; i++){
 
-		vector<int> id (v.begin() + 3*i, v.begin() + 3*i + 3);
+		vector<int> id (ids.begin() + 3*i, ids.begin() + 3*i + 3);
 		for (std::vector<int>::const_iterator j = id.begin(); j != id.end(); ++j)
 		    std::cout << *j << ' ';
 		if (id == correctIds[0]){
