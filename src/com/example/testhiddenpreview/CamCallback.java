@@ -25,32 +25,22 @@ import android.widget.Toast;
 public class CamCallback implements Camera.PreviewCallback{
 	
     private static final String TAG = "CamCallback";
-
     public static boolean enableProcess = false;
-    
-    
-    static byte[] data;
-        
-    static long distance = -1;
-    
+       
+    static byte[] data;        
+    static long distance = -1;    
     static int centerColumn = 995;
-    
-    static int centerRow = 540;
-    
-    static int BlobRadius = 0;
-    
-    static int lightOn = 0;
-    
-    static int bits = 3;
+    static int centerRow = 540;    
+    static int BlobRadius = 0;    
+    static int lightOn = 0;    
+    static int bits = 2;
     
     public static LinkedBlockingDeque<FrameData> frameQueue; 
 
     int frameNumber = 0; 
-    
     int i = 0;
     
     static Mode mode = Mode.init;
-    
     Camera camera;
     
     long prevCaptureTime = 0;
@@ -59,52 +49,34 @@ public class CamCallback implements Camera.PreviewCallback{
     FileOutputStream stream;
     
     static int expectedValue = 7;
-    
     static int sleep = 1000 - expectedValue;
     
     CamCallback(){
-    	
-		/*try {
-			stream = new FileOutputStream(MainActivity.delayFile);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}*/
-		
 
 		frameQueue = new LinkedBlockingDeque<FrameData>();
-		
-		startDecoder();	
-    	
-    	
+		startDecoder();	    		
     }
 
 	
 	@Override
 	public void onPreviewFrame(byte[] data, Camera camera){
 	     // Process the camera data here
-		 
-		
+		 		
 		this.data = data;
     	this.camera = camera;
-
-
 		
 		if (enableProcess) {
 			
 			prevCaptureTime = captureTime;
-			captureTime = System.nanoTime();
-
-			
+			captureTime = System.nanoTime();		
 						
 			long dif = captureTime - prevCaptureTime;
 			int delay = Math.round ((float)dif/1000000);
 			
-			Log.e(TAG,"Delay:"+delay );
-
+			Log.e(TAG,"Delay:" + delay );
 			
 			mode = Mode.decode;
 
-			
 			if(mode == Mode.check_light){
 				
 				//MainActivity.debugging.setText("Waiting for Light");
@@ -114,27 +86,7 @@ public class CamCallback implements Camera.PreviewCallback{
 				if(light == 1){
 					mode= Mode.calculate_distance;
 					System.out.println("LightON");
-				}
-				
-				/*
-				try {
-					Thread.sleep(500);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				*/
-				/*else{
-				
-					try {
-						Thread.sleep(1000);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}*/
-				
-				
-				
+				}			
 			}
 			else if (mode== Mode.capture_frame){
 				
@@ -156,9 +108,6 @@ public class CamCallback implements Camera.PreviewCallback{
 					enableProcess = false;
 					i=0;
 				}
-				
-				
-				
 			}
 			/*else if(mode== Mode.calculate_distance){
 				
@@ -180,9 +129,6 @@ public class CamCallback implements Camera.PreviewCallback{
 			}*/
 			else if(mode == Mode.decode){
 				
-				//MainActivity.debugging.setText("Bits:" + bits + "...Decoding...");
-
-				
 				//captureFrame();
 				frameNumber++;
 				
@@ -194,7 +140,6 @@ public class CamCallback implements Camera.PreviewCallback{
 				}
 				*/
 				
-
 				try {
 					
 					if(frameQueue.size() < 80)
@@ -205,62 +150,13 @@ public class CamCallback implements Camera.PreviewCallback{
 					e.printStackTrace();
 				};
 				
-				
-				
-				/*
-				int frameDelay = 1000 - (delay - 1000);
-				if(frameDelay < 0)
-					frameDelay = 1000;
-				try {
-					Thread.sleep(1000);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				*/
-				
 				String delayString = delay + " \n";
-				
-				
-				
-				/*
-			    try {
-					stream.write(delayString.getBytes());
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				*/
-				
-				
-				//Log.e(TAG,"FrameDelay:"+frameDelay);
-
-		        
-		        
-		        /*try {
-					Thread.sleep(50);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-		        */
-					
 				
 				if(frameNumber == 201){
 					//startDecoder();	
 
 					enableProcess = false;
 					frameNumber = 0;
-					
-					
-					/*try {
-						stream.close();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}*/
-					//MediaScannerConnection.scanFile(MainActivity.context, new String[] { MainActivity.delayFile.getAbsolutePath() }, null, null);
-					
 				}
 				
 				try {
@@ -269,9 +165,8 @@ public class CamCallback implements Camera.PreviewCallback{
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-
-				
 			}
+			
 			else if(mode == Mode.waiting){
 				
 				//MainActivity.debugging.setText("Waiting..");
@@ -280,19 +175,13 @@ public class CamCallback implements Camera.PreviewCallback{
 				
 				String delayString = delay + " \n";
 				
-				
 			    try {
 					stream.write(delayString.getBytes());
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				
-
-
-				
-				
-		        
+			    
 		        try {
 					Thread.sleep(1000);
 				} catch (InterruptedException e) {
@@ -314,64 +203,8 @@ public class CamCallback implements Camera.PreviewCallback{
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-					//MediaScannerConnection.scanFile(MainActivity.context, new String[] { MainActivity.delayFile.getAbsolutePath() }, null, null);
-					
 				}
-		        
-
-				
-				//System.out.println("Waiting");
-				//System.out.println(data.length);
-				
-			}
-			
-			
-	
-			
-			
-			
-			
-			//execute in asynck task
-			//new Processing().execute("");
-			
-			
-			/*//execute in main thread
-			int[] result = ImageProcessing2(1920, 1080, data, pixels);
-			
-			
-			
-			
-			long stopTime = System.nanoTime();
-	        Log.e(TAG,"SerialTime Millis:"+(float)(stopTime - startTime)/1000000);
-	        
-	        if (result.length == 0) {
-				System.out.println("Empty");
-			}
-			String message = "";
-			for (int i = 0; i < result.length; i++) {
-				System.out.println("Received: " + result[i]);
-				message = message + " " + i + ": " + result[i];
-			}*/
-				
-			
-			/*try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-			
-			i++;
-			
-			
-			if(i == 20){
-				enableProcess = false;
-				i=0;
-			}
-			
-*/
-			
+			}			
 		}
 	}
 	
@@ -441,7 +274,6 @@ public class CamCallback implements Camera.PreviewCallback{
 	
 	public void captureFrame(){
 		
-		
 		//save frame to jpeg
 		try {
 	        Camera.Parameters parameters = camera.getParameters();
@@ -475,57 +307,9 @@ public class CamCallback implements Camera.PreviewCallback{
 			}
 	        
 			MediaScannerConnection.scanFile(MainActivity.context, new String[] { file.getAbsolutePath() }, null, null);
-
-	        
 	        
 	    } catch (FileNotFoundException e) {
 	        System.out.println("File NOT found");
 	    }	
-		
-		
 	}
-
-	
-	
-	
-	/*private class Processing extends AsyncTask<String, Void, int[]> {
-
-	      @Override
-	      protected int[] doInBackground(String... params) {
-	    	  //android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_FOREGROUND);
-
-	    	  long startTime = System.nanoTime();
-
-	    	  int[] result = ImageProcessing2(1920, 1080, CamCallback.data, pixels);
-	    	  
-	    	  long stopTime = System.nanoTime();
-		      Log.e(TAG,"SerialTime Millis:"+(float)(stopTime - startTime)/1000000);
-		      
-				if (result.length == 0) {
-					System.out.println("Empty");
-				}
-				String message = "";
-				for (int i = 0; i < result.length; i++) {
-					System.out.println("Received: " + result[i]);
-					message = message + " " + i + ": " + result[i];
-				}
-	    	  
-	          return result;
-	      }
-
-	      @Override
-	      protected void onPostExecute(int[] result) {}
-
-	      @Override
-	      protected void onPreExecute() {}
-
-	      @Override
-	      protected void onProgressUpdate(Void... values) {}
-	  }*/
-	  
-	
-  
-    
-   
-
 }

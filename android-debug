@@ -1,0 +1,10 @@
+ #!/bin/bash
+ # activate remote port to pipe forwarding
+ PACKAGE_NAME=$1
+
+ if [[ -z "$PACKAGE_NAME" ]]; then
+  echo "No package name defined :-("
+ else
+  export PACKAGE_NAME
+  ndk-gdb-eclipse --force --verbose
+ fi

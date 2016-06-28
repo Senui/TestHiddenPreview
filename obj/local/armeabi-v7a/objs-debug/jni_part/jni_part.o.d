@@ -36,13 +36,10 @@ obj/local/armeabi-v7a/objs-debug/jni_part/jni_part.o: jni/jni_part.cpp \
  E:/NVPACK/OpenCV-2.4.8.2-Tegra-sdk/sdk/native/jni/include/opencv2/core/core.hpp \
  E:/NVPACK/OpenCV-2.4.8.2-Tegra-sdk/sdk/native/jni/include/opencv2/core/version.hpp \
  E:/NVPACK/android-ndk-r10e/sources/cxx-stl/gnu-libstdc++/4.8/include/algorithm \
- E:/NVPACK/android-ndk-r10e/sources/cxx-stl/gnu-libstdc++/4.8/include/cmath \
  E:/NVPACK/android-ndk-r10e/sources/cxx-stl/gnu-libstdc++/4.8/include/cstddef \
  E:/NVPACK/android-ndk-r10e/sources/cxx-stl/gnu-libstdc++/4.8/include/complex \
  E:/NVPACK/android-ndk-r10e/sources/cxx-stl/gnu-libstdc++/4.8/include/map \
- E:/NVPACK/android-ndk-r10e/sources/cxx-stl/gnu-libstdc++/4.8/include/vector \
  E:/NVPACK/OpenCV-2.4.8.2-Tegra-sdk/sdk/native/jni/include/opencv2/core/operations.hpp \
- E:/NVPACK/android-ndk-r10e/sources/cxx-stl/gnu-libstdc++/4.8/include/limits \
  E:/NVPACK/OpenCV-2.4.8.2-Tegra-sdk/sdk/native/jni/include/opencv2/core/mat.hpp \
  E:/NVPACK/OpenCV-2.4.8.2-Tegra-sdk/sdk/native/jni/include/opencv2/flann/miniflann.hpp \
  E:/NVPACK/OpenCV-2.4.8.2-Tegra-sdk/sdk/native/jni/include/opencv2/flann/defines.h \
@@ -146,19 +143,13 @@ E:/NVPACK/OpenCV-2.4.8.2-Tegra-sdk/sdk/native/jni/include/opencv2/core/version.h
 
 E:/NVPACK/android-ndk-r10e/sources/cxx-stl/gnu-libstdc++/4.8/include/algorithm:
 
-E:/NVPACK/android-ndk-r10e/sources/cxx-stl/gnu-libstdc++/4.8/include/cmath:
-
 E:/NVPACK/android-ndk-r10e/sources/cxx-stl/gnu-libstdc++/4.8/include/cstddef:
 
 E:/NVPACK/android-ndk-r10e/sources/cxx-stl/gnu-libstdc++/4.8/include/complex:
 
 E:/NVPACK/android-ndk-r10e/sources/cxx-stl/gnu-libstdc++/4.8/include/map:
 
-E:/NVPACK/android-ndk-r10e/sources/cxx-stl/gnu-libstdc++/4.8/include/vector:
-
 E:/NVPACK/OpenCV-2.4.8.2-Tegra-sdk/sdk/native/jni/include/opencv2/core/operations.hpp:
-
-E:/NVPACK/android-ndk-r10e/sources/cxx-stl/gnu-libstdc++/4.8/include/limits:
 
 E:/NVPACK/OpenCV-2.4.8.2-Tegra-sdk/sdk/native/jni/include/opencv2/core/mat.hpp:
 
